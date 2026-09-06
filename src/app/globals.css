@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f3ee;
+  --color-paper-2: #eeeae2;
+  --color-paper-3: #e6e1d7;
+  --color-ink: #17150f;
+  --color-ink-2: #45413a;
+  --color-muted: #857f74;
+  --color-line: #e1dcd2;
+  --color-accent: #d9482b;
+  --color-accent-deep: #b6371f;
+  --color-accent-soft: #fbe7e1;
+  --color-teal: #1f6f78;
+  --color-teal-soft: #dff0f1;
+  --color-pos: #2f7d5b;
+  --color-pos-soft: #e1f2e9;
+  --color-neg: #c0392b;
+  --color-neg-soft: #f9e3e0;
+  --color-mixed: #b8700a;
+  --color-mixed-soft: #f8ecd6;
+  --color-neu: #6b7280;
+  --color-neu-soft: #ebecef;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-instrument), "Iowan Old Style", Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-pop: pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-breathe: breathe 4.5s ease-in-out infinite;
+  --animate-blink: blink 1.4s ease-in-out infinite;
+  --animate-marquee-fade: marquee-fade 1.2s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes breathe {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.06);
+    }
+  }
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
+  }
+  @keyframes marquee-fade {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+}
+
+/* Subtle paper grain so large flat areas don't feel sterile. */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* The interviewer's voice orb. Scale + glow are driven per-frame via CSS vars. */
+.orb {
+  --level: 0;
+  --hue-a: #d9482b;
+  --hue-b: #f2a08a;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85), transparent 45%),
+    radial-gradient(circle at 60% 70%, var(--hue-b), transparent 60%),
+    radial-gradient(circle at 50% 50%, var(--hue-a), var(--hue-a) 40%, transparent 75%);
+  box-shadow:
+    0 0 calc(24px + var(--level) * 80px) calc(var(--level) * 18px) color-mix(in oklab, var(--hue-a) 45%, transparent),
+    inset 0 -18px 40px rgba(0, 0, 0, 0.12);
+  transform: scale(calc(1 + var(--level) * 0.28));
+  transition: transform 80ms linear, box-shadow 120ms linear, --hue-a 400ms ease, --hue-b 400ms ease;
+  will-change: transform;
+}
+.orb::after {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  border-radius: inherit;
+  border: 1.5px solid color-mix(in oklab, var(--hue-a) 35%, transparent);
+  opacity: calc(0.25 + var(--level) * 0.75);
+  transform: scale(calc(1 + var(--level) * 0.12));
+  transition: opacity 120ms linear;
+}
+.orb.listening {
+  --hue-a: #1f6f78;
+  --hue-b: #8fd0d6;
+}
+.orb.idle {
+  animation: var(--animate-breathe);
+}
+.orb.thinking::after {
+  animation: var(--animate-blink);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  box-shadow: 0 1px 0 rgba(23, 21, 15, 0.03), 0 10px 30px -18px rgba(23, 21, 15, 0.18);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-paper-3) transparent;
+}
+
+.prevalence-bar {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-deep));
+}

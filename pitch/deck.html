@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Verbatim — pitch deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f6f3ee; --paper2: #eeeae2; --ink: #17150f; --ink2: #45413a; --muted: #857f74; --line: #e1dcd2;
+    --accent: #d9482b; --accent-soft: #fbe7e1; --teal: #1f6f78; --pos: #2f7d5b; --neg: #c0392b; --mixed: #b8700a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #ddd; font-family: Inter, system-ui, sans-serif; color: var(--ink); }
+  .slide { width: 1280px; height: 720px; background: var(--paper); position: relative; overflow: hidden; padding: 64px 72px; page-break-after: always; margin: 24px auto; }
+  .slide:last-child { page-break-after: auto; }
+  .display { font-family: "Instrument Serif", Georgia, serif; letter-spacing: -0.01em; line-height: 1.02; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .mark { position: absolute; top: 40px; left: 72px; display: flex; align-items: baseline; gap: 8px; }
+  .mark .dot { width: 10px; height: 10px; border-radius: 99px; background: var(--accent); }
+  .mark .word { font-family: "Instrument Serif", serif; font-size: 26px; }
+  .num { position: absolute; bottom: 36px; right: 72px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  h1 { font-size: 92px; margin: 0; }
+  h2 { font-size: 56px; margin: 0 0 20px; }
+  h3 { font-size: 26px; margin: 0 0 8px; font-weight: 400; }
+  p { font-size: 20px; line-height: 1.45; color: var(--ink2); margin: 0 0 14px; }
+  .lead { font-size: 26px; color: var(--ink); }
+  .cols { display: grid; gap: 40px; }
+  .c2 { grid-template-columns: 1fr 1fr; } .c3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px; }
+  .card h4 { margin: 0 0 6px; font-size: 18px; }
+  .card p { font-size: 16px; margin: 0; }
+  .accent { color: var(--accent); }
+  .shot { border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 50px -30px rgba(0,0,0,.35); object-fit: cover; object-position: top; background: #fff; }
+  .quote { font-family: "Instrument Serif", serif; font-size: 30px; line-height: 1.25; }
+  .stat { font-family: "Instrument Serif", serif; font-size: 72px; line-height: 1; }
+  .statl { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+  .pill { display: inline-block; border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 4px 12px; font-size: 14px; margin: 4px 6px 0 0; }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
+  ol.steps li { counter-increment: s; }
+  ol.steps li::before { content: "0" counter(s); display: block; font-family: ui-monospace, monospace; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  ol.steps h3 { font-size: 28px; }
+  .arch { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 14.5px; line-height: 1.55; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; white-space: pre; color: var(--ink2); }
+  .bar { height: 8px; background: var(--paper2); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #b6371f); }
+  .tiny { font-size: 14px; color: var(--muted); }
+  ul.clean { padding-left: 18px; margin: 0; } ul.clean li { font-size: 19px; line-height: 1.45; color: var(--ink2); margin-bottom: 8px; }
+  @media print { html, body { background: #fff; } .slide { margin: 0; } @page { size: 1280px 720px; margin: 0; } }
+</style>
+</head>
+<body>
+
+<!-- 1 · Title -->
+<section class="slide" style="display:flex;flex-direction:column;justify-content:center;">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-bottom:22px">AssemblyAI Voice Agent Hackathon · September 2026</div>
+  <h1 class="display">User interviews at the scale of a survey.<br /><span class="accent" style="font-style:italic">In their own words.</span></h1>
+  <p class="lead" style="margin-top:28px;max-width:900px">An AI interviewer that listens like a researcher — asks the follow-up, waits while you think, never cuts you off — and hands you the write-up like one.</p>
+  <div class="num">1</div>
+</section>
+
+<!-- 2 · Problem -->
+<section class="slide">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-top:40px">The problem</div>
+  <h2 class="display">Talking to users is the highest-signal thing a team can do. It's also the one thing that doesn't scale.</h2>
+  <div class="cols c3" style="margin-top:36px">
+    <div><div class="stat">~5</div><div class="statl">interviews a researcher can run in a day</div><p style="margin-top:12px">Recruit, schedule, moderate, transcribe, synthesise. Most studies stop at 6–10 conversations.</p></div>
+    <div><div class="stat">3 wks</div><div class="statl">from "we should ask users" to findings</div><p style="margin-top:12px">So teams fall back to surveys — fast, cheap, and shallow. Nobody types the story of the sprint they lost.</p></div>
+    <div><div class="stat">&#8220;…&#8221;</div><div class="statl">AI interviewers interrupt you</div><p style="margin-top:12px">Existing bots run on silence timers. You pause to think — and it decides you're done. Participants stop trusting it in one turn.</p></div>
+  </div>
+  <div class="num">2</div>
+</section>
+
+<!-- 3 · Solution -->
+<section class="slide">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-top:40px">The product</div>
+  <h2 class="display">Write the guide. Share a link. Read the synthesis — and hear the evidence.</h2>
+  <ol class="steps" style="margin-top:30px">
+    <li><h3 class="display">A discussion guide, not a script</h3><p>Three to six open questions and a research goal. Verbatim turns it into an interviewer with a plan — and the judgement to leave it for a good follow-up.</p></li>
+    <li><h3 class="display">A conversation, not a form</h3><p>Participants talk. Semantic turn detection means a pause to think is never mistaken for the end of an answer; they can interrupt like they would a person.</p></li>
+    <li><h3 class="display">Themes ranked by evidence</h3><p>Notes in the participant's exact words as they speak; an instant write-up; a study-wide synthesis where every quote plays back in their own voice.</p></li>
+  </ol>
+  <div class="num">3</div>
+</section>
+
+<!-- 4 · Demo: interview -->
+<section class="slide" style="padding-right:40px">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="cols" style="grid-template-columns: 420px 1fr; margin-top:40px; align-items:start">
+    <div>
+      <div class="eyebrow">Demo · the participant</div>
+      <h2 class="display" style="font-size:44px;margin-top:8px">It takes notes while you talk — in your exact words.</h2>
+      <p>The orb breathes while it listens. Captions land word-by-word as the audio plays. On the right, the interviewer's notes appear a beat after each answer: theme, verbatim quote, why it matters, sentiment.</p>
+      <p class="tiny">Every quote is checked against the transcript before it's saved. Nothing is paraphrased.</p>
+    </div>
+    <img class="shot" src="shots/interview-live.png" alt="Live interview" style="width:100%;height:560px" />
+  </div>
+  <div class="num">4</div>
+</section>
+
+<!-- 5 · Demo: dashboard -->
+<section class="slide" style="padding-right:40px">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="cols" style="grid-template-columns: 1fr 420px; margin-top:40px; align-items:start">
+    <img class="shot" src="shots/dashboard-full.png" alt="Researcher dashboard" style="width:100%;height:560px" />
+    <div>
+      <div class="eyebrow">Demo · the researcher</div>
+      <h2 class="display" style="font-size:44px;margin-top:8px">Synthesis with receipts.</h2>
+      <p>Themes ranked by how many participants said them. Each one cites the verbatim notes as evidence, with sentiment, tensions, recommendations and the questions to ask next round.</p>
+      <div class="card" style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h4 style="margin:0">Trust needs a source link</h4><span class="pill" style="margin:0;color:var(--pos)">positive</span></div>
+        <div class="bar"><i style="width:75%"></i></div><div class="tiny">3 of 4 participants</div>
+        <div class="quote" style="font-size:20px;margin-top:10px">“I'd trust it as long as I could see the exact bit of conversation it came from.”</div>
+        <div class="tiny" style="margin-top:6px">Maya · <span style="color:var(--accent)">▶ Hear it</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="num">5</div>
+</section>
+
+<!-- 6 · Why it works -->
+<section class="slide">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-top:40px">Why it works</div>
+  <h2 class="display">The interviewer behaves like a person because the turn-taking does.</h2>
+  <div class="cols c2" style="margin-top:28px">
+    <div class="card"><h4>Semantic end-of-turn</h4><p>AssemblyAI decides you're done from the meaning of what you said, not a silence timer. Verbatim leaves turn detection on the adaptive defaults on purpose — the pause to think is where the good answers are.</p></div>
+    <div class="card"><h4>Semantic barge-in</h4><p>"Wait, actually—" stops the interviewer; "uh-huh" doesn't. Queued audio is flushed the instant speech starts so nothing stale plays.</p></div>
+    <div class="card"><h4>Notes as tool calls, not extra models</h4><p>The interviewer calls <code>capture_insight</code> silently before it replies. Live notes cost zero extra LLM calls and land in under a second.</p></div>
+    <div class="card"><h4>Evidence you can play</h4><p>Session recordings are stereo (participant left, interviewer right) with a per-turn timeline, so each quote seeks straight to the moment it was said.</p></div>
+  </div>
+  <div class="num">6</div>
+</section>
+
+<!-- 7 · Built on AssemblyAI -->
+<section class="slide">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-top:40px">Built on AssemblyAI</div>
+  <h2 class="display" style="font-size:44px">Three products, one WebSocket, no key in the browser.</h2>
+  <div class="cols" style="grid-template-columns: 1.15fr .85fr; margin-top:10px">
+<div class="arch">browser ──POST /api/interviews──▶ Next.js ──GET /v1/token (Bearer)──▶ Voice Agent API
+        ◀── { token, sessionConfig } ──
+        ══ wss://agents.assemblyai.com/v1/ws?token=… ═══════════════▶ Voice Agent API
+           session.update · input.audio (24 kHz PCM16)
+           ◀ transcript.user · reply.audio · transcript.agent.delta
+           ◀ tool.call capture_insight / mark_topic_complete / end_interview
+           ▶ tool.result (after reply.done) · reply.create (time up) · session.end
+        ──POST turns / insights / events──▶ libSQL (Turso)
+        ──POST complete──▶ Next.js ──chat/completions──▶ LLM Gateway   (write-up)
+researcher ──POST synthesize──▶ Next.js ──chat/completions──▶ LLM Gateway (themes)
+           ──GET audio / timeline──▶ Next.js ──GET /v1/sessions/:id──▶ Session history</div>
+    <div>
+      <div class="card" style="margin-bottom:12px"><h4>Voice Agent API</h4><p>Inline session config per study: prompt from the guide, keyterms, transcription prompt, language, voice. Hold-mode client tools. Single-use tokens.</p></div>
+      <div class="card" style="margin-bottom:12px"><h4>LLM Gateway</h4><p>One call per interview, one per synthesis. Zod-validated JSON; quotes cited by code so themes can't invent evidence.</p></div>
+      <div class="card"><h4>Session history</h4><p>Recording + timeline fetched on demand (pre-signed URLs never stored).</p></div>
+    </div>
+  </div>
+  <div class="num">7</div>
+</section>
+
+<!-- 8 · Business -->
+<section class="slide">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-top:40px">Business</div>
+  <h2 class="display">Price of a survey. Depth of an interview.</h2>
+  <div class="cols c3" style="margin-top:24px">
+    <div><h3 class="display">Who buys</h3><ul class="clean"><li>Product &amp; UX research teams that run continuous discovery</li><li>Agencies and consultancies billing per study</li><li>Founders doing customer discovery without a researcher</li></ul></div>
+    <div><h3 class="display">How it's priced</h3><ul class="clean"><li>Per completed interview, a small fraction of a moderated session's cost</li><li>Team plan for unlimited studies, seats and exports</li><li>Usage-based margin on AssemblyAI minutes</li></ul></div>
+    <div><h3 class="display">Why now</h3><ul class="clean"><li>AI-moderated research is a funded category — the incumbents' weakness is exactly the conversation quality</li><li>Voice agents crossed the "feels like a person" line this year: semantic turns, sub-second replies</li><li>Every quote is auditable — the trust problem AI summaries have is solved with a play button</li></ul></div>
+  </div>
+  <div class="num">8</div>
+</section>
+
+<!-- 9 · Next -->
+<section class="slide">
+  <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
+  <div class="eyebrow" style="margin-top:40px">What's next</div>
+  <h2 class="display">From a demo to a research tool.</h2>
+  <div class="cols c2" style="margin-top:20px">
+    <ul class="clean">
+      <li><b>Phone participation</b> — Twilio SIP + stored agents, so recruits dial a number.</li>
+      <li><b>Analyst whispers</b> — a second model suggesting probes mid-conversation.</li>
+      <li><b>Multilingual studies</b> — 18 input languages today; native-voice output as voices ship.</li>
+    </ul>
+    <ul class="clean">
+      <li><b>Workspaces</b> — auth, teams, participant screening and incentives.</li>
+      <li><b>Exports</b> — Notion, Dovetail, Docs; share a theme with its audio clips.</li>
+      <li><b>Longitudinal</b> — re-interview the same people; track how themes move.</li>
+    </ul>
+  </div>
+  <div style="position:absolute;bottom:64px;left:72px;right:72px;display:flex;justify-content:space-between;align-items:flex-end">
+    <div><div class="eyebrow">Built by</div><div class="display" style="font-size:30px;margin-top:6px">Anubhav Prasai</div></div>
+    <div style="text-align:right"><div class="tiny">Live demo · GitHub (MIT)</div><div class="display" style="font-size:24px;margin-top:6px">verbatim · Next.js + AssemblyAI</div></div>
+  </div>
+  <div class="num">9</div>
+</section>
+
+</body>
+</html>
