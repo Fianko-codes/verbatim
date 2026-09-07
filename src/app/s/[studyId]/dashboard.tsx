@@ -88,11 +88,11 @@ export function Dashboard({ initial, highlight }: { initial: Bundle; highlight: 
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
         <Wordmark />
         <div className="flex items-center gap-2">
-          <Link href="/new" className={buttonClass({ variant: "ghost", size: "sm" })}>
+          <Link href="/new" className={`${buttonClass({ variant: "ghost", size: "sm" })} hidden sm:inline-flex`}>
             New study
           </Link>
           <Link href={`/i/${study.id}`} className={buttonClass({ size: "sm" })}>
-            <Mic className="w-3.5 h-3.5" /> Open interview link
+            <Mic className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Open interview link</span><span className="sm:hidden">Interview link</span>
           </Link>
         </div>
       </header>

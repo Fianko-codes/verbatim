@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, AudioLines, MessageSquareQuote, Mic, Sparkles } from "lucide-react";
-import { DEMO_STUDY_ID } from "@/lib/constants";
+import { DEMO_STUDY_ID, REPO_URL } from "@/lib/constants";
 import { Eyebrow, Wordmark, buttonClass } from "@/components/ui";
 
 export default function Home() {
@@ -9,7 +9,7 @@ export default function Home() {
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
         <Wordmark />
         <nav className="flex items-center gap-2 text-sm">
-          <Link href={`/s/${DEMO_STUDY_ID}`} className={buttonClass({ variant: "ghost", size: "sm" })}>
+          <Link href={`/s/${DEMO_STUDY_ID}`} className={`${buttonClass({ variant: "ghost", size: "sm" })} hidden sm:inline-flex`}>
             Researcher dashboard
           </Link>
           <Link href="/new" className={buttonClass({ variant: "secondary", size: "sm" })}>
@@ -92,7 +92,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4 text-[13px] text-muted">
           <span>Built for the AssemblyAI Voice Agent Hackathon · MIT licensed</span>
           <div className="flex items-center gap-4">
-            <a className="hover:text-ink" href="https://github.com/anubhavprasai/verbatim" target="_blank" rel="noreferrer">
+            <a className="hover:text-ink" href={REPO_URL} target="_blank" rel="noreferrer">
               GitHub
             </a>
             <a className="hover:text-ink" href="https://www.assemblyai.com/docs/voice-agents/voice-agent-api" target="_blank" rel="noreferrer">

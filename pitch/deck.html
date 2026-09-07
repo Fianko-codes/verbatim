@@ -40,10 +40,11 @@
   ol.steps li { counter-increment: s; }
   ol.steps li::before { content: "0" counter(s); display: block; font-family: ui-monospace, monospace; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
   ol.steps h3 { font-size: 28px; }
-  .arch { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 14.5px; line-height: 1.55; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; white-space: pre; color: var(--ink2); }
+  .arch { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13.5px; line-height: 1.55; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; white-space: pre; color: var(--ink2); }
   .bar { height: 8px; background: var(--paper2); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
   .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #b6371f); }
   .tiny { font-size: 14px; color: var(--muted); }
+  .card.compact { padding: 14px 18px; } .card.compact h4 { font-size: 16px; margin-bottom: 4px; } .card.compact p { font-size: 14px; line-height: 1.4; }
   ul.clean { padding-left: 18px; margin: 0; } ul.clean li { font-size: 19px; line-height: 1.45; color: var(--ink2); margin-bottom: 8px; }
   @media print { html, body { background: #fff; } .slide { margin: 0; } @page { size: 1280px 720px; margin: 0; } }
 </style>
@@ -95,7 +96,7 @@
       <p>The orb breathes while it listens. Captions land word-by-word as the audio plays. On the right, the interviewer's notes appear a beat after each answer: theme, verbatim quote, why it matters, sentiment.</p>
       <p class="tiny">Every quote is checked against the transcript before it's saved. Nothing is paraphrased.</p>
     </div>
-    <img class="shot" src="shots/interview-live.png" alt="Live interview" style="width:100%;height:560px" />
+    <img class="shot" src="../docs/shots/interview-live.png" alt="Live interview" style="width:100%;height:auto;margin-top:10px" />
   </div>
   <div class="num">4</div>
 </section>
@@ -104,7 +105,7 @@
 <section class="slide" style="padding-right:40px">
   <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
   <div class="cols" style="grid-template-columns: 1fr 420px; margin-top:40px; align-items:start">
-    <img class="shot" src="shots/dashboard-full.png" alt="Researcher dashboard" style="width:100%;height:560px" />
+    <img class="shot" src="../docs/shots/dashboard-full.png" alt="Researcher dashboard" style="width:100%;height:560px" />
     <div>
       <div class="eyebrow">Demo · the researcher</div>
       <h2 class="display" style="font-size:44px;margin-top:8px">Synthesis with receipts.</h2>
@@ -139,7 +140,7 @@
   <div class="mark"><span class="dot"></span><span class="word">Verbatim</span></div>
   <div class="eyebrow" style="margin-top:40px">Built on AssemblyAI</div>
   <h2 class="display" style="font-size:44px">Three products, one WebSocket, no key in the browser.</h2>
-  <div class="cols" style="grid-template-columns: 1.15fr .85fr; margin-top:10px">
+  <div class="cols" style="grid-template-columns: 1.15fr .85fr; margin-top:10px; align-items:start; gap:28px">
 <div class="arch">browser ──POST /api/interviews──▶ Next.js ──GET /v1/token (Bearer)──▶ Voice Agent API
         ◀── { token, sessionConfig } ──
         ══ wss://agents.assemblyai.com/v1/ws?token=… ═══════════════▶ Voice Agent API
@@ -152,9 +153,9 @@
 researcher ──POST synthesize──▶ Next.js ──chat/completions──▶ LLM Gateway (themes)
            ──GET audio / timeline──▶ Next.js ──GET /v1/sessions/:id──▶ Session history</div>
     <div>
-      <div class="card" style="margin-bottom:12px"><h4>Voice Agent API</h4><p>Inline session config per study: prompt from the guide, keyterms, transcription prompt, language, voice. Hold-mode client tools. Single-use tokens.</p></div>
-      <div class="card" style="margin-bottom:12px"><h4>LLM Gateway</h4><p>One call per interview, one per synthesis. Zod-validated JSON; quotes cited by code so themes can't invent evidence.</p></div>
-      <div class="card"><h4>Session history</h4><p>Recording + timeline fetched on demand (pre-signed URLs never stored).</p></div>
+      <div class="card compact" style="margin-bottom:10px"><h4>Voice Agent API</h4><p>Inline session config per study: prompt from the guide, keyterms, transcription prompt, language, voice. Hold-mode client tools. Single-use tokens.</p></div>
+      <div class="card compact" style="margin-bottom:10px"><h4>LLM Gateway</h4><p>One call per interview, one per synthesis. Zod-validated JSON; quotes cited by code so themes can't invent evidence.</p></div>
+      <div class="card compact"><h4>Session history</h4><p>Recording + timeline fetched on demand (pre-signed URLs never stored).</p></div>
     </div>
   </div>
   <div class="num">7</div>

@@ -48,3 +48,6 @@ local.db*
 # e2e fixtures/artifacts
 e2e/*.wav
 e2e/*.png
+
+# full-res screenshots (regenerate with pitch/shots.mjs)
+pitch/shots/

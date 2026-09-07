@@ -82,17 +82,119 @@ export function extractJson(text: string): unknown {
   const endArr = s.lastIndexOf("]");
   const end = Math.max(endObj, endArr);
   const candidate = s.slice(start, end + 1);
-  try {
-    return JSON.parse(candidate);
-  } catch (err) {
-    // Small models hit max_tokens mid-document. Close whatever is open and try again.
-    const repaired = repairTruncatedJson(s.slice(start));
+  const tail = s.slice(start);
+  const attempts = [
+    () => candidate,
+    // Small models forget to close an array before the next key, or mismatch closers.
+    () => repairStructure(candidate),
+    // …put raw double quotes inside string values.
+    () => escapeInnerQuotes(candidate),
+    () => repairStructure(escapeInnerQuotes(candidate)),
+    // …or hit max_tokens mid-document. Close whatever is open.
+    () => repairTruncatedJson(tail),
+    () => repairTruncatedJson(repairStructure(tail)),
+    () => repairTruncatedJson(repairStructure(escapeInnerQuotes(tail))),
+  ];
+  let firstErr: unknown;
+  for (const make of attempts) {
     try {
-      return JSON.parse(repaired);
-    } catch {
-      throw err;
+      return JSON.parse(make());
+    } catch (err) {
+      firstErr ??= err;
     }
   }
+  throw firstErr;
+}
+
+/**
+ * Structural repair for the two mistakes small models make most:
+ *  - an object key appearing while an array is still open (`["a","b","key":…`)
+ *    → the array is closed before the key;
+ *  - a closer that doesn't match the innermost opener (`{"a":[1,2},"b":3}`)
+ *    → it's replaced with the expected one.
+ */
+export function repairStructure(s: string): string {
+  const stack: string[] = []; // expected closers
+  let out = "";
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === '"') {
+      // Consume the whole string token.
+      let j = i + 1;
+      while (j < s.length) {
+        if (s[j] === "\\") j += 2;
+        else if (s[j] === '"') break;
+        else j++;
+      }
+      const token = s.slice(i, Math.min(j + 1, s.length));
+      let k = j + 1;
+      while (k < s.length && /\s/.test(s[k])) k++;
+      const isKey = s[k] === ":";
+      if (isKey) {
+        // Keys only belong directly inside objects: close any arrays first.
+        while (stack.length && stack[stack.length - 1] === "]") {
+          stack.pop();
+          const trimmed = out.replace(/\s*,\s*$/, "");
+          out = trimmed + "]" + (out.length !== trimmed.length ? "," : "");
+        }
+      }
+      out += token;
+      i = j + 1;
+      continue;
+    }
+    if (ch === "{" || ch === "[") {
+      stack.push(ch === "{" ? "}" : "]");
+      out += ch;
+    } else if (ch === "}" || ch === "]") {
+      if (!stack.length) {
+        // Nothing to close — drop the stray closer.
+      } else {
+        // A closer of the wrong kind is treated as a typo for the expected one
+        // (`[1,2}` → `[1,2]`); a truncation pass closes anything left open later.
+        out += stack.pop();
+      }
+    } else out += ch;
+    i++;
+  }
+  return out;
+}
+
+/**
+ * Escape double quotes that appear *inside* JSON string values. A quote is
+ * treated as the closing one only if the next non-space character could
+ * legally follow a string (`,` `}` `]` `:`), otherwise it's escaped.
+ */
+export function escapeInnerQuotes(s: string): string {
+  let out = "";
+  let inStr = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!inStr) {
+      out += ch;
+      if (ch === '"') inStr = true;
+      continue;
+    }
+    if (ch === "\\") {
+      out += ch + (s[i + 1] ?? "");
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < s.length && /\s/.test(s[j])) j++;
+      const next = s[j];
+      if (next === undefined || next === "," || next === "}" || next === "]" || next === ":") {
+        out += ch;
+        inStr = false;
+      } else {
+        out += '\\"';
+      }
+      continue;
+    }
+    out += ch;
+  }
+  return out;
 }
 
 /**
@@ -100,49 +202,43 @@ export function extractJson(text: string): unknown {
  * token, then close any open strings, arrays and objects.
  */
 export function repairTruncatedJson(s: string): string {
-  const stack: string[] = [];
-  let inStr = false;
-  let esc = false;
-  let lastGood = 0; // index just past the last structurally complete value
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (ch === "\\") esc = true;
-      else if (ch === '"') {
-        inStr = false;
-        lastGood = i + 1;
+  const scan = (str: string) => {
+    const stack: string[] = [];
+    let inStr = false;
+    let esc = false;
+    let strStart = -1;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === "\\") esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
       }
-      continue;
+      if (ch === '"') {
+        inStr = true;
+        strStart = i;
+      } else if (ch === "{" || ch === "[") stack.push(ch === "{" ? "}" : "]");
+      else if (ch === "}" || ch === "]") stack.pop();
     }
-    if (ch === '"') inStr = true;
-    else if (ch === "{" || ch === "[") stack.push(ch === "{" ? "}" : "]");
-    else if (ch === "}" || ch === "]") {
-      stack.pop();
-      lastGood = i + 1;
-    } else if (ch === "," || ch === ":") lastGood = i + 1;
-    else if (/[0-9a-z]/i.test(ch)) lastGood = i + 1; // numbers / true / false / null
+    return { stack, inStr, strStart };
+  };
+
+  let out = s.replace(/\\$/, "");
+  const first = scan(out);
+  if (first.inStr) {
+    const before = out.slice(0, first.strStart).trimEnd();
+    const prev = before[before.length - 1];
+    const inObject = first.stack[first.stack.length - 1] === "}";
+    // An unterminated string in key position can't be completed — drop it. A value gets closed.
+    out = inObject && (prev === "{" || prev === ",") ? before : out + '"';
   }
-  let out = inStr ? s : s.slice(0, lastGood);
-  if (inStr) out += '"';
-  // Remove a trailing comma or a dangling `"key":` before closing.
-  out = out.replace(/,\s*$/, "").replace(/,?\s*"[^"]*"\s*:\s*$/, "");
-  // Re-derive the open stack for the trimmed string.
-  const open: string[] = [];
-  let q = false;
-  let e = false;
-  for (const ch of out) {
-    if (q) {
-      if (e) e = false;
-      else if (ch === "\\") e = true;
-      else if (ch === '"') q = false;
-      continue;
-    }
-    if (ch === '"') q = true;
-    else if (ch === "{" || ch === "[") open.push(ch === "{" ? "}" : "]");
-    else if (ch === "}" || ch === "]") open.pop();
-  }
-  return out + open.reverse().join("");
+  out = out
+    .replace(/(?<=[:,[]\s*)(?:t|tr|tru|f|fa|fal|fals|n|nu|nul|-|\d+\.|\d+[eE][+-]?)$/, "") // partial literal
+    .replace(/,?\s*"(?:[^"\\]|\\.)*"\s*:\s*$/, "") // dangling "key":
+    .replace(/,\s*$/, ""); // trailing comma
+  const { stack } = scan(out);
+  return out + stack.reverse().join("");
 }
 
 /**
@@ -182,7 +278,8 @@ export async function chatJSON<T>(opts: {
       model: opts.model,
       timeoutMs: opts.timeoutMs,
     });
-    if (process.env.LLM_DEBUG) console.log(`[llm] raw (${raw.length} chars):`, raw.slice(0, 400), "…", raw.slice(-300));
+    if (process.env.LLM_DEBUG === "full") console.log(`[llm] raw (${raw.length} chars):\n${raw}\n[/llm]`);
+    else if (process.env.LLM_DEBUG) console.log(`[llm] raw (${raw.length} chars):`, raw.slice(0, 400), "…", raw.slice(-300));
     try {
       const parsed = opts.schema.safeParse(extractJson(raw));
       if (parsed.success) return parsed.data;

@@ -34,7 +34,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function buttonClass({ variant = "primary", size = "md" }: Pick<ButtonProps, "variant" | "size">) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
   const sizes = { sm: "h-8 px-3.5 text-[13px]", md: "h-10 px-5 text-sm", lg: "h-12 px-7 text-[15px]" };
   const variants = {
     primary: "bg-ink text-paper hover:bg-ink-2 shadow-sm",

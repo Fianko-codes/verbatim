@@ -132,7 +132,19 @@ export async function synthesizeStudy(input: {
         .map((c) => byCode.get(String(c).toUpperCase().replace(/[^Q0-9]/g, "")))
         .filter((q): q is NonNullable<typeof q> => Boolean(q));
       // If the model cited nothing usable, fall back to quotes whose theme label overlaps.
-      const fallback = cited.length ? cited : quotes.filter((q) => norm(q.theme) === norm(t.name)).slice(0, 2);
+      const chosen = cited.length ? cited : quotes.filter((q) => norm(q.theme) === norm(t.name));
+      // One quote per wording, and prefer spreading evidence across participants.
+      const seenText = new Set<string>();
+      const seenParticipant = new Set<string>();
+      const fallback = [...chosen]
+        .sort((a, b) => Number(seenParticipant.has(a.interviewId)) - Number(seenParticipant.has(b.interviewId)))
+        .filter((q) => {
+          const key = norm(q.text);
+          if (seenText.has(key)) return false;
+          seenText.add(key);
+          seenParticipant.add(q.interviewId);
+          return true;
+        });
       const distinct = new Set(fallback.map((q) => q.interviewId)).size;
       return {
         name: titleCase(t.name),

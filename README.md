@@ -8,6 +8,12 @@ Built for the [AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons
 
 > **Try it:** open the demo, click *Try a 3-minute interview*, talk, then open *See what the researcher sees*.
 
+![Verbatim landing page](docs/shots/landing.png)
+
+| The interview — live notes in the participant's exact words | The researcher's dashboard — themes ranked by evidence |
+|---|---|
+| ![Live interview](docs/shots/interview-live.png) | ![Dashboard](docs/shots/dashboard-full.png) |
+
 ---
 
 ## Why
@@ -91,9 +97,13 @@ The golden path is covered end-to-end with a fake microphone: Chrome plays a WAV
 
 ```bash
 pnpm dev &
-node e2e/interview.mjs            # add --headed 1 to watch it
+node e2e/interview.mjs                                   # golden path (add --headed 1 to watch)
+node e2e/interview.mjs --end-after 45                    # participant presses End
+node e2e/interview.mjs --wav e2e/participant-timeup.wav --done-timeout 300   # 3-minute clock wraps it up
 pnpm typecheck && pnpm lint
 ```
+
+The WAV fixtures are generated from the Voice Agent's own TTS (see `e2e/`); they're git-ignored, so regenerate or record your own 48 kHz mono WAV.
 
 ## Honest notes
 

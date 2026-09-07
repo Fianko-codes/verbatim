@@ -54,12 +54,22 @@ try {
   await Promise.race([bodyHas(/verbatim is speaking/), page.waitForTimeout(40_000).then(() => Promise.reject(new Error("agent never spoke")))]);
   log("agent speaking");
 
+  // Optional: exercise the End button after N seconds instead of letting the agent close.
+  const endAfter = Number(args["end-after"] ?? 0);
+  if (endAfter > 0) {
+    await page.waitForTimeout(endAfter * 1000);
+    await page.click('button:has-text("End")');
+    log("clicked End");
+  }
+
   // Wait for the first participant turn to land in the transcript.
-  await Promise.race([bodyHas(/sprint planning/), page.waitForTimeout(60_000).then(() => Promise.reject(new Error("participant speech not transcribed")))]);
-  log("participant transcribed");
+  if (endAfter === 0) {
+    await Promise.race([bodyHas(/sprint planning/), page.waitForTimeout(60_000).then(() => Promise.reject(new Error("participant speech not transcribed")))]);
+    log("participant transcribed");
+  }
 
   // Live notes should appear (capture_insight tool) within a couple of turns.
-  const noteSeen = await Promise.race([
+  const noteSeen = endAfter > 0 ? false : await Promise.race([
     page.waitForSelector("aside .card", { timeout: 0 }).then(() => true),
     page.waitForTimeout(60_000).then(() => false),
   ]);
@@ -70,7 +80,8 @@ try {
   }
 
   // Wait for the done screen (agent calls end_interview after "let's wrap up").
-  await Promise.race([bodyHas(/That's a wrap/), page.waitForTimeout(150_000).then(() => Promise.reject(new Error("never reached done screen")))]);
+  const doneTimeout = Number(args["done-timeout"] ?? 150) * 1000;
+  await Promise.race([bodyHas(/That's a wrap/), page.waitForTimeout(doneTimeout).then(() => Promise.reject(new Error("never reached done screen")))]);
   log("done screen reached");
 
   // Wait for the write-up.
@@ -94,10 +105,10 @@ try {
   if (listed === 0) ok = false;
 
   // Open the interview detail and confirm transcript + insights rendered.
-  await Promise.all([page.waitForURL(/\/s\/[^/]+\/[^/?]+/, { timeout: 30_000 }), page.locator('a:has-text("E2E Bot")').first().click()]);
-  await page.waitForLoadState("networkidle");
+  const detailHref = await page.locator('a[href^="/s/"]:has-text("E2E Bot")').first().getAttribute("href");
+  await page.goto(`${BASE}${detailHref}`, { waitUntil: "networkidle" });
   const detail = await page.locator("main").innerText();
-  const hasTranscript = /Transcript/.test(detail) && /Google Doc|sprint planning/i.test(detail);
+  const hasTranscript = /transcript/i.test(detail) && (endAfter > 0 || /Google Doc|sprint planning/i.test(detail));
   log(hasTranscript ? "PASS: transcript on detail page" : "FAIL: transcript missing on detail page");
   if (!hasTranscript) ok = false;
   await page.screenshot({ path: new URL("./last-detail.png", import.meta.url).pathname, fullPage: true });
