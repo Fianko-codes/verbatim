@@ -32,7 +32,7 @@ type StartResponse = {
   showLiveNotes: boolean;
 };
 
-const HARD_STOP_GRACE_MS = 75_000;
+const HARD_STOP_GRACE_MS = 45_000;
 
 export function InterviewRoom({ study }: { study: StudyView }) {
   const [phase, setPhase] = useState<Phase>("intro");
@@ -76,6 +76,8 @@ export function InterviewRoom({ study }: { study: StudyView }) {
     timeUpTimer: ReturnType<typeof setTimeout> | null;
     lastUserText: string;
     lastUserIdx: number | null;
+    repliesSinceEnding: number;
+    endFallback: ReturnType<typeof setTimeout> | null;
   }>({
     ctx: null,
     mic: null,
@@ -99,6 +101,8 @@ export function InterviewRoom({ study }: { study: StudyView }) {
     timeUpTimer: null,
     lastUserText: "",
     lastUserIdx: null,
+    repliesSinceEnding: 0,
+    endFallback: null,
   });
 
   const orbRef = useRef<HTMLDivElement>(null);
@@ -124,14 +128,13 @@ export function InterviewRoom({ study }: { study: StudyView }) {
       const r = rt.current;
       if (!r.interviewId) return;
       try {
-        const data = (await post(`/api/interviews/${r.interviewId}/turns`, {
+        await post(`/api/interviews/${r.interviewId}/turns`, {
           idx: turn.idx,
           role: turn.role,
           text: turn.text,
           atMs: Math.max(0, Math.round(performance.now() - r.startedAt)),
           interrupted: Boolean(turn.interrupted),
-        })) as { insights: Insight[] };
-        if (data.insights?.length) setInsights((prev) => [...prev, ...data.insights]);
+        });
       } catch (err) {
         console.warn("persistTurn failed", err);
       }
@@ -183,6 +186,7 @@ export function InterviewRoom({ study }: { study: StudyView }) {
       r.finalized = true;
       if (r.hardStop) clearTimeout(r.hardStop);
       if (r.timeUpTimer) clearTimeout(r.timeUpTimer);
+      if (r.endFallback) clearTimeout(r.endFallback);
       clearCaptionTimers();
       r.mic?.stop();
       r.player?.destroy();
@@ -245,6 +249,11 @@ export function InterviewRoom({ study }: { study: StudyView }) {
       switch (ev.type) {
         case "reply.started": {
           r.replyActive = true;
+          if (r.ending) r.repliesSinceEnding += 1;
+          if (r.endFallback) {
+            clearTimeout(r.endFallback);
+            r.endFallback = null;
+          }
           r.replyAudioStart = null;
           r.captionText = "";
           clearCaptionTimers();
@@ -290,7 +299,10 @@ export function InterviewRoom({ study }: { study: StudyView }) {
             };
             setTimeout(check, 150);
           }
-          if (r.ending && !r.endingRequested) void endGracefully();
+          if (r.ending && !r.endingRequested) {
+            if (r.repliesSinceEnding >= 1) void endGracefully();
+            else if (!r.endFallback) r.endFallback = setTimeout(() => void endGracefully(), 6000);
+          }
           resolveIdleWaiters();
           break;
         }
@@ -377,7 +389,8 @@ export function InterviewRoom({ study }: { study: StudyView }) {
       }
       if (nameOfTool === "end_interview") {
         r.ending = true;
-        return { ok: true, message: "Interview ended. Say goodbye." };
+        r.repliesSinceEnding = 0;
+        return { ok: true, message: "Recorded. Now say goodbye to the participant." };
       }
       return { ok: false, error: `Unknown tool ${nameOfTool}` };
     },
@@ -422,6 +435,9 @@ export function InterviewRoom({ study }: { study: StudyView }) {
         whenIdle(() => {
           if (r.endingRequested || r.timeUpSent) return;
           r.timeUpSent = true;
+          // The agent says goodbye; the page ends the session when that reply is done.
+          r.ending = true;
+          r.repliesSinceEnding = 0;
           client.createReply(TIME_UP_INSTRUCTIONS);
         });
       }, totalMs);

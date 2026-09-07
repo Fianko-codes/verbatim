@@ -37,7 +37,7 @@ Moderated user interviews are the highest-signal research method and the least s
 |---|---|---|
 | The interviewer | **Voice Agent API** (`wss://agents.assemblyai.com/v1/ws`) | One WebSocket carries speech recognition, the conversational model, TTS and turn-taking. Sessions are configured inline (`session.update`) from the study: system prompt built from the discussion guide, per-study `keyterms` + `transcription_prompt`, optional `language_codes`, voice. Turn detection is left on the adaptive/semantic defaults on purpose. |
 | Live notes | **Voice Agent API — client-side tools** | The interviewer calls `capture_insight` (theme, verbatim quote, note, sentiment, topic) silently before it replies, `mark_topic_complete` as the guide is covered, and `end_interview` to close. Tools run in `hold` mode; results are returned only after `reply.done`, per the docs. The browser re-checks every quote against the participant's actual transcript before saving it. |
-| Time-boxing | **Voice Agent API — `reply.create`** | When the study's target length is reached, the page sends a one-shot instruction to wrap up gracefully rather than hanging up. |
+| Time-boxing | **Voice Agent API — `reply.create`** | When the study's target length is reached, the page waits for the current exchange to finish, sends a one-shot instruction for a spoken goodbye, and ends the session itself when that reply completes — with a hard stop as the safety net. |
 | Browser audio | **Voice Agent API — token auth** | The server mints single-use tokens (`GET /v1/token`, `Bearer` auth); the API key never reaches the browser. Mic audio is captured in an `AudioWorklet`, resampled to 24 kHz PCM16, sent as `input.audio`; `reply.audio` is scheduled gaplessly and flushed on barge-in. `session.end` is sent on hang-up and `pagehide`. |
 | Write-ups & synthesis | **LLM Gateway** (`/v1/chat/completions`) | One call when an interview ends (headline, summary, sentiment, key quotes, pain points, wants) and one per synthesis (themes cite quote codes that map back to real notes). Validated with zod and retried with the error fed back. |
 | Quote playback | **Session history** (`GET /v1/sessions/{id}`) | The stereo OGG recording (left = participant, right = interviewer) and the per-turn timeline give each quote a timestamp; the dashboard seeks straight to it. Pre-signed URLs are never stored — they're re-fetched on demand. |
@@ -87,9 +87,12 @@ Environment:
 
 ## Deploy
 
-1. Create a [Turso](https://turso.tech) database; set `DATABASE_URL` (`libsql://…`) and `DATABASE_AUTH_TOKEN`.
-2. `pnpm db:push && pnpm db:seed` against it (same env vars).
-3. Deploy to Vercel with the environment variables above. Route handlers that call the Gateway declare `maxDuration` for the free tier.
+1. Create a [Turso](https://turso.tech) database (free tier is plenty). Put its `libsql://…` URL in `DATABASE_URL` and the token in `DATABASE_AUTH_TOKEN`.
+2. With those two variables in your shell or `.env`, run `pnpm db:push && pnpm db:seed` to create the schema and the demo study on it (the seed makes ~5 Gateway calls; on a free AssemblyAI account that takes about 90 s because of rate limits).
+3. Import the repo into [Vercel](https://vercel.com/new) and set `ASSEMBLYAI_API_KEY`, `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `NEXT_PUBLIC_APP_URL` (your Vercel URL) and optionally `LLM_MODEL` / `NEXT_PUBLIC_REPO_URL`. Route handlers that call the Gateway declare `maxDuration` so they fit the Hobby plan.
+4. Open `/i/demo`, do one real interview yourself, then `pnpm synthesize` (or press *Re-synthesise* on the dashboard) so the synthesis includes a recording-backed interview with a working **Hear it** button.
+
+Other scripts: `pnpm shots` (screenshots), `pnpm deck` (rebuild `pitch/deck.pdf`), `pnpm db:studio` (browse the database).
 
 ## Test
 
@@ -97,10 +100,10 @@ The golden path is covered end-to-end with a fake microphone: Chrome plays a WAV
 
 ```bash
 pnpm dev &
-node e2e/interview.mjs                                   # golden path (add --headed 1 to watch)
-node e2e/interview.mjs --end-after 45                    # participant presses End
-node e2e/interview.mjs --wav e2e/participant-timeup.wav --done-timeout 300   # 3-minute clock wraps it up
-pnpm typecheck && pnpm lint
+pnpm e2e                                                  # golden path (add --headed 1 to watch)
+pnpm e2e --end-after 45                                   # participant presses End
+pnpm e2e --wav e2e/participant-timeup.wav --done-timeout 330   # the 3-minute clock wraps it up
+pnpm typecheck && pnpm lint && pnpm build
 ```
 
 The WAV fixtures are generated from the Voice Agent's own TTS (see `e2e/`); they're git-ignored, so regenerate or record your own 48 kHz mono WAV.

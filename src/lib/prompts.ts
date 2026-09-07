@@ -103,11 +103,11 @@ export function interviewerTools(topics: Topic[]) {
       type: "function",
       name: "end_interview",
       description:
-        "End the interview. Call this right after thanking the participant, when every topic is covered, when the participant says they are done, or when told time is up.",
+        "End the interview. Call this right after thanking the participant, when every topic is covered or when the participant says they are done.",
       parameters: {
         type: "object",
         properties: {
-          reason: { type: "string", enum: ["topics_covered", "participant_done", "time_up"] },
+          reason: { type: "string", enum: ["topics_covered", "participant_done"] },
         },
         required: ["reason"],
       },
@@ -117,9 +117,13 @@ export function interviewerTools(topics: Topic[]) {
   ];
 }
 
-/** One-shot instruction pushed via reply.create when the clock runs out. */
+/**
+ * One-shot instruction pushed via reply.create when the clock runs out. The
+ * page ends the session itself once this reply finishes, so the agent is told
+ * not to call tools (under reply.create the model tends to read tool calls aloud).
+ */
 export const TIME_UP_INSTRUCTIONS =
-  "Time is up. Do not ask another question. Thank the participant warmly in one short sentence for their time and their honesty, then call end_interview with reason time_up.";
+  'Time is up. Do not ask another question and do not call any tools. Say exactly: "Thank you, that is all the time we have today. I really appreciate you sharing this so honestly." and nothing else.';
 
 // ---------------------------------------------------------------------------
 // Analyst (live, per user turn)

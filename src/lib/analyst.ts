@@ -19,13 +19,19 @@ const sentimentSchema = z
   .pipe(z.enum(["positive", "neutral", "negative", "mixed"]))
   .catch("neutral");
 
+/** Small models sometimes return a lone string where a list was asked for. */
+const stringList = z.preprocess(
+  (v) => (typeof v === "string" ? (v.trim() ? [v] : []) : Array.isArray(v) ? v.filter((x) => typeof x === "string") : []),
+  z.array(z.string()),
+);
+
 const summarySchema = z.object({
   headline: z.string().min(1),
   summary: z.string().min(1),
   sentiment: sentimentSchema,
   keyQuotes: z.array(z.object({ text: z.string().min(1), theme: z.string().default("") })).default([]),
-  painPoints: z.array(z.string()).default([]),
-  desires: z.array(z.string()).default([]),
+  painPoints: stringList.default([]),
+  desires: stringList.default([]),
 });
 
 export async function summarizeInterview(input: {
@@ -64,13 +70,13 @@ const synthesisSchema = z.object({
         description: z.string().default(""),
         prevalence: z.coerce.number().default(1),
         sentiment: sentimentSchema,
-        quoteCodes: z.array(z.string()).default([]),
+        quoteCodes: stringList.default([]),
       }),
     )
     .min(1),
-  tensions: z.array(z.string()).default([]),
-  recommendations: z.array(z.string()).default([]),
-  nextQuestions: z.array(z.string()).default([]),
+  tensions: stringList.default([]),
+  recommendations: stringList.default([]),
+  nextQuestions: stringList.default([]),
 });
 
 export async function synthesizeStudy(input: {
