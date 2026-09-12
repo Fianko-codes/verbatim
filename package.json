@@ -14,7 +14,11 @@
     "synthesize": "tsx scripts/synthesize.mts",
     "e2e": "node e2e/interview.mjs",
     "shots": "node pitch/shots.mjs",
-    "deck": "node pitch/build-deck.mjs"
+    "deck": "node pitch/build-deck.mjs",
+    "db:adopt": "tsx scripts/adopt-studies.mts",
+    "e2e:auth": "node e2e/auth.mjs",
+    "db:reset-studies": "tsx scripts/reset-studies.mts",
+    "db:migrate-auth": "tsx scripts/migrate-auth.mts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

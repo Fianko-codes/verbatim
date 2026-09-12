@@ -1,7 +1,8 @@
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { getInterview, getStudy } from "@/lib/queries";
+import { authorizeInterviewWrite, crossOriginRejected, sameOrigin } from "@/lib/auth/guards";
+import { getStudy } from "@/lib/queries";
 import { insightInput } from "@/lib/validation";
 
 /**
@@ -10,12 +11,16 @@ import { insightInput } from "@/lib/validation";
  * words on the client before it gets here.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!sameOrigin(req)) return crossOriginRejected();
   const { id } = await ctx.params;
+
+  const auth = await authorizeInterviewWrite(id);
+  if (!auth.ok) return auth.response;
+  const { interview } = auth;
+
   const parsed = insightInput.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid insight" }, { status: 400 });
 
-  const interview = await getInterview(id);
-  if (!interview) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const study = await getStudy(interview.studyId);
   const validTopics = new Set(study?.topics.map((t) => t.id) ?? []);
 
@@ -23,6 +28,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const row = {
     id: nanoid(12),
     interviewId: id,
+    // Taken from the interview row, never from the request, so a note cannot be
+    // filed against a study the participant was not talking to.
     studyId: interview.studyId,
     topicId: i.topicId && validTopics.has(i.topicId) ? i.topicId : null,
     theme: i.theme,

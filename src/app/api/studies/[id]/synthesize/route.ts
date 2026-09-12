@@ -2,12 +2,21 @@ import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { synthesizeStudy } from "@/lib/analyst";
+import { crossOriginRejected, getOwnedStudy, requireApiViewer, sameOrigin } from "@/lib/auth/guards";
 import { getStudyBundle } from "@/lib/queries";
 
 export const maxDuration = 60;
 
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!sameOrigin(req)) return crossOriginRejected();
   const { id } = await ctx.params;
+  const auth = await requireApiViewer();
+  if (!auth.ok) return auth.response;
+
+  if (!(await getOwnedStudy(id, auth.viewer))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const bundle = await getStudyBundle(id);
   if (!bundle) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const completed = bundle.interviews.filter((i) => i.status === "completed" && i.summary);

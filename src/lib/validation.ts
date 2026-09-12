@@ -84,3 +84,41 @@ export const completeInput = z.object({
   durationSeconds: z.number().int().min(0),
   status: z.enum(["completed", "abandoned"]).default("completed"),
 });
+
+/* ------------------------------------------------------------------ *
+ * Researcher accounts
+ * ------------------------------------------------------------------ */
+
+/**
+ * Usernames are lower-cased on the way in so `Maya` and `maya` are the same
+ * account, and restricted to characters that cannot be confused for one
+ * another in a login field.
+ */
+export const usernameInput = z
+  .string()
+  .trim()
+  .min(3, "Username must be at least 3 characters")
+  .max(40, "Username must be at most 40 characters")
+  .regex(/^[a-zA-Z0-9._@+-]+$/, "Use letters, numbers and . _ @ + - only")
+  .transform((v) => v.toLowerCase());
+
+/**
+ * 12 characters minimum with no composition rules, which NIST 800-63B favours
+ * over the classic symbol requirements. The upper bound only stops someone
+ * pushing a megabyte through the KDF.
+ */
+export const passwordInput = z
+  .string()
+  .min(12, "Password must be at least 12 characters")
+  .max(200, "Password must be at most 200 characters");
+
+export const signUpInput = z.object({
+  username: usernameInput,
+  password: passwordInput,
+  name: z.string().trim().max(80).default(""),
+});
+
+export const signInInput = z.object({
+  username: z.string().trim().min(1).max(40).transform((v) => v.toLowerCase()),
+  password: z.string().min(1).max(200),
+});

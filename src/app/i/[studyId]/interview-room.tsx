@@ -545,7 +545,7 @@ export function InterviewRoom({ study }: { study: StudyView }) {
 
   return (
     <main className="flex-1 flex flex-col">
-      <header className="px-5 sm:px-8 py-4 flex items-center justify-between gap-4">
+      <header className="px-4 sm:px-8 py-4 flex items-center justify-between gap-3 sm:gap-4">
         <Wordmark />
         <div className="hidden sm:flex items-center gap-2">
           {study.topics.map((t, i) => {
@@ -563,13 +563,13 @@ export function InterviewRoom({ study }: { study: StudyView }) {
             );
           })}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="font-mono text-[13px] text-muted tabular-nums" title="Time remaining">
             {fmt(remaining)}
           </span>
           <Button variant="secondary" size="sm" onClick={toggleMute} aria-pressed={muted}>
             {muted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-            {muted ? "Unmute" : "Mute"}
+            <span className="hidden sm:inline">{muted ? "Unmute" : "Mute"}</span>
           </Button>
           <Button variant="danger" size="sm" onClick={hangUp} disabled={phase === "ending"}>
             <PhoneOff className="w-3.5 h-3.5" /> End
@@ -578,7 +578,7 @@ export function InterviewRoom({ study }: { study: StudyView }) {
       </header>
 
       <div className={`flex-1 grid ${showNotes ? "lg:grid-cols-[1fr_360px]" : ""} gap-0 min-h-0`}>
-        <section className="flex flex-col items-center px-5 sm:px-8 pb-8 min-h-0">
+        <section className="flex flex-col items-center px-4 sm:px-8 pb-8 min-h-0 min-w-0">
           <div className="w-full max-w-2xl flex-1 flex flex-col items-center min-h-0">
             <div className="relative mt-6 sm:mt-10 w-36 h-36 sm:w-44 sm:h-44 grid place-items-center">
               <div ref={orbRef} className={`orb ${orbState}`} />
@@ -623,7 +623,7 @@ export function InterviewRoom({ study }: { study: StudyView }) {
                   <span className="shrink-0 w-14 text-[11px] uppercase tracking-wider text-muted pt-1">
                     {t.role === "user" ? "You" : "Verbatim"}
                   </span>
-                  <span>
+                  <span className="min-w-0 break-words">
                     {t.text}
                     {t.interrupted && <span className="text-muted"> —</span>}
                   </span>
@@ -634,7 +634,7 @@ export function InterviewRoom({ study }: { study: StudyView }) {
         </section>
 
         {showNotes && (
-          <aside className="border-t lg:border-t-0 lg:border-l border-line bg-paper-2/60 px-5 py-5 flex flex-col min-h-0">
+          <aside className="border-t lg:border-t-0 lg:border-l border-line bg-paper-2/60 px-4 sm:px-5 py-5 flex flex-col min-h-0 min-w-0">
             <div className="flex items-center justify-between">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Live notes</div>
               <span className="inline-flex items-center gap-1.5 text-[12px] text-muted">
@@ -710,7 +710,7 @@ function Intro({
       <section className="flex-1 grid place-items-center px-6 pb-16">
         <div className="w-full max-w-lg animate-fade-up">
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">You&apos;re invited to a short interview</div>
-          <h1 className="mt-3 font-display text-[40px] sm:text-[48px] leading-[1.02] tracking-tight">{study.title}</h1>
+          <h1 className="mt-3 font-display text-[36px] sm:text-[48px] leading-[1.02] tracking-tight break-words">{study.title}</h1>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-2">
             You&apos;ll talk with Verbatim, an AI interviewer, for about {study.durationMinutes} minutes. It asks{" "}
             {study.topics.length} open questions and follows up on what you say. Speak naturally — you can interrupt it,
@@ -757,7 +757,7 @@ function Intro({
               <Link href={`/s/${study.id}`} className="underline hover:text-ink">
                 researcher dashboard
               </Link>{" "}
-              alongside sample interviews.
+              alongside sample interviews. That dashboard is public; real studies are private to their researcher.
             </p>
           )}
         </div>
@@ -794,7 +794,7 @@ function Done({
       <section className="flex-1 px-6 pb-16">
         <div className="max-w-2xl mx-auto animate-fade-up">
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Thank you</div>
-          <h1 className="mt-3 font-display text-[44px] leading-[1.02] tracking-tight">
+          <h1 className="mt-3 font-display text-[36px] sm:text-[44px] leading-[1.02] tracking-tight">
             That&apos;s a wrap.
             {said > 0 && <span className="text-muted"> Here&apos;s what we heard.</span>}
           </h1>
@@ -818,7 +818,7 @@ function Done({
               {summaryState === "ready" && summary && (
                 <div className="animate-fade-up">
                   <div className="flex items-start justify-between gap-3">
-                    <h2 className="font-display text-[26px] leading-snug">{summary.headline}</h2>
+                    <h2 className="font-display text-[24px] sm:text-[26px] leading-snug min-w-0">{summary.headline}</h2>
                     <SentimentChip value={summary.sentiment} className="mt-2 shrink-0" />
                   </div>
                   <p className="mt-3 text-[15px] leading-relaxed text-ink-2">{summary.summary}</p>
@@ -837,13 +837,31 @@ function Done({
             </div>
           )}
 
+          {/*
+            The dashboard is the researcher's private view of every participant
+            in the study, so it is only offered on the demo — the one published
+            study, where the whole point is to show a visitor both sides. Real
+            participants get their own write-up above and nothing of anyone
+            else's.
+          */}
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link href={`/s/${study.id}${interviewId ? `?highlight=${interviewId}` : ""}`} className={buttonClass({ size: "lg" })}>
-              See what the researcher sees <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link href={`/i/${study.id}`} className={buttonClass({ variant: "secondary", size: "lg" })}>
-              <RotateCcw className="w-4 h-4" /> Do another interview
-            </Link>
+            {study.isDemo ? (
+              <>
+                <Link
+                  href={`/s/${study.id}${interviewId ? `?highlight=${interviewId}` : ""}`}
+                  className={buttonClass({ size: "lg" })}
+                >
+                  See what the researcher sees <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link href={`/i/${study.id}`} className={buttonClass({ variant: "secondary", size: "lg" })}>
+                  <RotateCcw className="w-4 h-4" /> Do another interview
+                </Link>
+              </>
+            ) : (
+              <Link href={`/i/${study.id}`} className={buttonClass({ variant: "secondary", size: "lg" })}>
+                <RotateCcw className="w-4 h-4" /> Do another interview
+              </Link>
+            )}
           </div>
         </div>
       </section>

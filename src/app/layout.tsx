@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${instrument.variable} ${geistMono.variable} h-full`}>
       <body className="grain min-h-full flex flex-col relative">
-        <div className="relative z-[1] flex-1 flex flex-col">{children}</div>
+        <div className="relative z-[1] flex-1 flex flex-col overflow-x-clip">{children}</div>
       </body>
     </html>
   );

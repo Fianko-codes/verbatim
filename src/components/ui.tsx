@@ -3,7 +3,7 @@ import type { Sentiment } from "@/db/schema";
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <Link href="/" className={`inline-flex items-baseline gap-1.5 group ${className}`}>
+    <Link href="/" className={`inline-flex items-baseline gap-1.5 group shrink-0 ${className}`}>
       <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent translate-y-[-1px] group-hover:scale-110 transition-transform" />
       <span className="font-display text-[26px] leading-none tracking-tight">Verbatim</span>
     </Link>

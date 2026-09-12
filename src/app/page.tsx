@@ -1,27 +1,45 @@
 import Link from "next/link";
 import { ArrowRight, AudioLines, MessageSquareQuote, Mic, Sparkles } from "lucide-react";
+import { currentViewer } from "@/lib/auth/guards";
 import { DEMO_STUDY_ID, REPO_URL } from "@/lib/constants";
 import { Eyebrow, Wordmark, buttonClass } from "@/components/ui";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const viewer = await currentViewer();
   return (
     <main className="flex-1">
-      <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+      <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
         <Wordmark />
-        <nav className="flex items-center gap-2 text-sm">
-          <Link href={`/s/${DEMO_STUDY_ID}`} className={`${buttonClass({ variant: "ghost", size: "sm" })} hidden sm:inline-flex`}>
-            Researcher dashboard
-          </Link>
-          <Link href="/new" className={buttonClass({ variant: "secondary", size: "sm" })}>
-            Create a study
-          </Link>
+        <nav className="flex items-center gap-2 text-sm shrink-0">
+          {viewer ? (
+            <>
+              <Link href="/studies" className={`${buttonClass({ variant: "ghost", size: "sm" })} max-sm:hidden`}>
+                Your studies
+              </Link>
+              <Link href="/new" className={buttonClass({ variant: "secondary", size: "sm" })}>
+                Create a study
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/signin" className={`${buttonClass({ variant: "ghost", size: "sm" })} max-sm:hidden`}>
+                Sign in
+              </Link>
+              <Link href="/signup" className={buttonClass({ variant: "secondary", size: "sm" })}>
+                <span className="hidden sm:inline">Create an account</span>
+                <span className="sm:hidden">Sign up</span>
+              </Link>
+            </>
+          )}
         </nav>
       </header>
 
-      <section className="max-w-6xl mx-auto px-6 pt-14 pb-20 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
-        <div className="animate-fade-up">
+      <section className="max-w-6xl mx-auto px-6 pt-10 sm:pt-14 pb-20 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
+        <div className="animate-fade-up min-w-0">
           <Eyebrow className="mb-5">AI-moderated user research</Eyebrow>
-          <h1 className="font-display text-[56px] sm:text-[72px] leading-[0.98] tracking-tight text-ink">
+          <h1 className="font-display text-[48px] sm:text-[72px] leading-[0.98] tracking-tight text-ink">
             User interviews at the scale of a survey.
             <br />
             <span className="italic text-accent">In their own words.</span>
@@ -35,6 +53,7 @@ export default function Home() {
             <Link href={`/i/${DEMO_STUDY_ID}`} className={buttonClass({ size: "lg" })}>
               <Mic className="w-4 h-4" /> Try a 3-minute interview
             </Link>
+            {/* The demo study is published, so this works with no account. */}
             <Link href={`/s/${DEMO_STUDY_ID}`} className={buttonClass({ variant: "secondary", size: "lg" })}>
               See the researcher&apos;s view <ArrowRight className="w-4 h-4" />
             </Link>
@@ -42,7 +61,7 @@ export default function Home() {
           <p className="mt-4 text-[13px] text-muted">Works in the browser with a microphone. Headphones recommended.</p>
         </div>
 
-        <div className="animate-fade-up [animation-delay:120ms]">
+        <div className="animate-fade-up [animation-delay:120ms] min-w-0">
           <DemoPreview />
         </div>
       </section>
@@ -137,11 +156,11 @@ function DemoPreview() {
         </span>
         <span className="font-mono">02:14</span>
       </div>
-      <div className="mt-6 flex items-center gap-5">
-        <div className="w-16 h-16 shrink-0">
+      <div className="mt-6 flex items-center gap-4 sm:gap-5">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0">
           <div className="orb idle" style={{ ["--level" as string]: 0.35 }} />
         </div>
-        <p className="font-display text-[22px] leading-snug text-ink">
+        <p className="font-display text-[20px] sm:text-[22px] leading-snug text-ink min-w-0">
           You said the notes end up in three places. Which one do people actually go back to?
         </p>
       </div>

@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
+import type { Viewer } from "@/lib/auth/session";
 import { LANGUAGES, VOICES } from "@/lib/validation";
+import { ResearcherNav } from "@/components/researcher-nav";
 import { Button, Eyebrow, Label, Wordmark, inputClass } from "@/components/ui";
 
 type TopicDraft = { question: string; probes: string };
@@ -20,7 +23,7 @@ const EXAMPLE = {
   keyterms: "SDK, API key, webhook, rate limit, sandbox",
 };
 
-export function NewStudyForm() {
+export function NewStudyForm({ viewer }: { viewer: Viewer }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [goal, setGoal] = useState("");
@@ -83,19 +86,25 @@ export function NewStudyForm() {
 
   return (
     <main className="flex-1">
-      <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+      <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
         <Wordmark />
+        <div className="flex items-center gap-3 shrink-0">
+          <Link href="/studies" className="text-[13px] text-ink-2 hover:text-ink whitespace-nowrap">
+            Your studies
+          </Link>
+          <ResearcherNav viewer={viewer} />
+        </div>
       </header>
       <section className="max-w-3xl mx-auto px-6 pb-20">
         <Eyebrow>New study</Eyebrow>
-        <h1 className="mt-2 font-display text-[44px] leading-[1.02] tracking-tight">Write the guide. Verbatim does the interviews.</h1>
+        <h1 className="mt-2 font-display text-[36px] sm:text-[44px] leading-[1.02] tracking-tight">Write the guide. Verbatim does the interviews.</h1>
         <p className="mt-3 text-[15px] text-ink-2">
           Open questions work best — Verbatim will ask the follow-ups. You&apos;ll get a share link in a moment.
         </p>
 
         <form onSubmit={submit} className="mt-8 space-y-6">
-          <div className="card p-6 space-y-5">
-            <div className="flex items-center justify-between">
+          <div className="card p-5 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-[13px] font-medium">About the study</div>
               <Button type="button" variant="ghost" size="sm" onClick={fillExample}>
                 <Sparkles className="w-3.5 h-3.5" /> Use an example
@@ -115,7 +124,7 @@ export function NewStudyForm() {
             </div>
           </div>
 
-          <div className="card p-6 space-y-4">
+          <div className="card p-5 sm:p-6 space-y-4">
             <div className="text-[13px] font-medium">Discussion guide</div>
             {topics.map((t, i) => (
               <div key={i} className="rounded-xl border border-line p-4 space-y-3">
@@ -150,7 +159,7 @@ export function NewStudyForm() {
             )}
           </div>
 
-          <div className="card p-6 grid sm:grid-cols-2 gap-5">
+          <div className="card p-5 sm:p-6 grid sm:grid-cols-2 gap-5">
             <div>
               <Label>Target length</Label>
               <select className={inputClass} value={duration} onChange={(e) => setDuration(Number(e.target.value))}>

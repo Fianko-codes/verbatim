@@ -2,6 +2,15 @@ import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Insight, Interview, Study, SynthesisRow, Turn } from "@/db/schema";
 
+/**
+ * Fetch a study by id with no ownership check.
+ *
+ * This is the participant path: `/i/[studyId]` and the interview write routes
+ * need the discussion guide without anyone being signed in. It returns the
+ * study configuration only — never interviews, notes or transcripts. Anything
+ * that reaches other participants' data must go through the owner-scoped
+ * helpers in `src/lib/auth/guards.ts` instead.
+ */
 export async function getStudy(id: string): Promise<Study | null> {
   const rows = await db.select().from(schema.studies).where(eq(schema.studies.id, id)).limit(1);
   return rows[0] ?? null;
@@ -63,6 +72,26 @@ export async function getStudyBundle(id: string): Promise<StudyBundle | null> {
 export async function getInterview(id: string): Promise<Interview | null> {
   const rows = await db.select().from(schema.interviews).where(eq(schema.interviews.id, id)).limit(1);
   return rows[0] ?? null;
+}
+
+/** Studies owned by one researcher, newest first, with a count of completed interviews. */
+export async function listStudiesForResearcher(researcherId: string) {
+  const rows = await db
+    .select()
+    .from(schema.studies)
+    .where(eq(schema.studies.researcherId, researcherId))
+    .orderBy(desc(schema.studies.createdAt));
+  if (rows.length === 0) return [];
+  const counts = await db
+    .select({ studyId: schema.interviews.studyId, status: schema.interviews.status })
+    .from(schema.interviews)
+    .innerJoin(schema.studies, eq(schema.studies.id, schema.interviews.studyId))
+    .where(eq(schema.studies.researcherId, researcherId));
+  return rows.map((study) => ({
+    study,
+    completed: counts.filter((c) => c.studyId === study.id && c.status === "completed").length,
+    live: counts.filter((c) => c.studyId === study.id && c.status === "in_progress").length,
+  }));
 }
 
 export async function getInterviewDetail(id: string): Promise<{

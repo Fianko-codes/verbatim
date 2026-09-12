@@ -1,19 +1,24 @@
 import { NextResponse } from "next/server";
 import { getVoiceAgentTimeline } from "@/lib/aai";
-import { getInterview } from "@/lib/queries";
+import { currentViewer, getReadableInterview } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Per-turn timestamps from the AssemblyAI session timeline, normalised to
  * seconds from the start of the recording so the dashboard can seek to a quote.
+ *
+ * The payload carries the participant's transcript, so it follows the same rule
+ * as the recording: owner-only unless the study is published.
  */
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const interview = await getInterview(id);
-  if (!interview?.aaiSessionId) return NextResponse.json({ turns: [] });
+  const access = await getReadableInterview(id, await currentViewer());
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!access.interview.aaiSessionId) return NextResponse.json({ turns: [] });
+
   try {
-    const tl = await getVoiceAgentTimeline(interview.aaiSessionId);
+    const tl = await getVoiceAgentTimeline(access.interview.aaiSessionId);
     if (!tl) return NextResponse.json({ turns: [] });
     const t0 = tl.started_at_unix_ms;
     const turns = tl.turns

@@ -14,11 +14,44 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db, schema } from "./index";
 import { summarizeInterview, synthesizeStudy } from "../lib/analyst";
-import { DEMO_STUDY_ID } from "../lib/constants";
+import { hashPassword } from "../lib/auth/password";
+import { DEMO_RESEARCHER_USERNAME, DEMO_STUDY_ID } from "../lib/constants";
 import type { Sentiment, Study } from "./schema";
+
+/**
+ * The demo study needs an owner, because every study has one. These credentials
+ * are deliberately public — the demo dashboard is meant to be opened by anyone
+ * with the link — but they are a real account going through the real password
+ * and session code, not a bypass. Set DEMO_RESEARCHER_PASSWORD to something
+ * else, or skip seeding the demo entirely, for a deployment that is not a
+ * public showcase.
+ */
+const DEMO_PASSWORD = process.env.DEMO_RESEARCHER_PASSWORD ?? "verbatim-demo-2026";
+
+async function ensureDemoResearcher(): Promise<string> {
+  const existing = await db
+    .select()
+    .from(schema.researchers)
+    .where(eq(schema.researchers.username, DEMO_RESEARCHER_USERNAME))
+    .limit(1);
+  if (existing[0]) return existing[0].id;
+
+  const id = nanoid(12);
+  await db.insert(schema.researchers).values({
+    id,
+    username: DEMO_RESEARCHER_USERNAME,
+    name: "Demo researcher",
+    passwordHash: await hashPassword(DEMO_PASSWORD),
+    createdAt: new Date(),
+  });
+  console.log(`Demo researcher "${DEMO_RESEARCHER_USERNAME}" created (password: ${DEMO_PASSWORD}).`);
+  return id;
+}
 
 const study: Study = {
   id: DEMO_STUDY_ID,
+  // Filled in by ensureDemoResearcher() before the study is written.
+  researcherId: null,
   title: "Meeting notes & follow-ups",
   goal: "Understand how people capture decisions and action items from meetings, where follow-ups get lost, and what would make them trust an AI meeting assistant.",
   audience: "People who sit in five or more meetings a week.",
@@ -44,6 +77,10 @@ const study: Study = {
   keyterms: ["Notion", "Slack", "Jira", "Google Docs", "Loom", "Gong", "Confluence", "action items", "standup", "retro"],
   languageCodes: [],
   showLiveNotes: true,
+  // The one published study: anyone can open its dashboard without an account,
+  // so a visitor can see the researcher's side of the product. Every study
+  // created through the app is private.
+  isPublic: true,
   isDemo: true,
   createdAt: new Date(Date.now() - 6 * 86400_000),
 };
@@ -160,6 +197,8 @@ const scripts: Script[] = [
 async function main() {
   const skipAnalysis = process.env.SKIP_ANALYSIS === "1" || !process.env.ASSEMBLYAI_API_KEY;
   if (skipAnalysis) console.log("Seeding transcripts + notes only (SKIP_ANALYSIS or no ASSEMBLYAI_API_KEY).");
+
+  study.researcherId = await ensureDemoResearcher();
 
   // Upsert the study and replace only the sample data — real interviews survive a re-seed.
   const { id: _id, createdAt: _createdAt, ...studyFields } = study;

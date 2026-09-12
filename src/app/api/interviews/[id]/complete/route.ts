@@ -2,19 +2,28 @@ import { asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { summarizeInterview } from "@/lib/analyst";
-import { getInterview, getStudy } from "@/lib/queries";
+import { authorizeInterviewWrite, crossOriginRejected, sameOrigin } from "@/lib/auth/guards";
+import { getStudy } from "@/lib/queries";
 import { completeInput } from "@/lib/validation";
 
 export const maxDuration = 60;
 
-/** Mark the interview finished and produce the post-interview summary. */
+/**
+ * Mark the interview finished and produce the post-interview summary.
+ * The participant sees this write-up on the thank-you page, so the participant
+ * grant is enough — but only for their own interview.
+ */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!sameOrigin(req)) return crossOriginRejected();
   const { id } = await ctx.params;
+
+  const auth = await authorizeInterviewWrite(id);
+  if (!auth.ok) return auth.response;
+  const { interview } = auth;
+
   const parsed = completeInput.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const interview = await getInterview(id);
-  if (!interview) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (interview.status === "completed" && interview.summary) {
     return NextResponse.json({ summary: interview.summary, status: interview.status });
   }

@@ -1,16 +1,20 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { getInterview } from "@/lib/queries";
+import { authorizeInterviewWrite, crossOriginRejected, sameOrigin } from "@/lib/auth/guards";
 import { interviewEventInput } from "@/lib/validation";
 
 /** Small state updates from the live interview page (session id, topic coverage). */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!sameOrigin(req)) return crossOriginRejected();
   const { id } = await ctx.params;
+
+  const auth = await authorizeInterviewWrite(id);
+  if (!auth.ok) return auth.response;
+  const { interview } = auth;
+
   const parsed = interviewEventInput.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid event" }, { status: 400 });
-  const interview = await getInterview(id);
-  if (!interview) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const ev = parsed.data;
   if (ev.type === "session") {

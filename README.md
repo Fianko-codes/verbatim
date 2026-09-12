@@ -23,10 +23,14 @@ Moderated user interviews are the highest-signal research method and the least s
 ## What it does
 
 **Researcher**
+0. `/signup` — a username and a password. Studies, interviews, transcripts and recordings belong to the account that created them, and are invisible to every other account.
 1. `/new` — write a title, research goal, and 3–6 open questions (optional probes, vocabulary hints, participant language, voice).
 2. `/s/[study]` — the dashboard: participant link, interviews as they land (live, while someone is talking), per-interview write-ups, and **Synthesise** → ranked themes with prevalence ("3 of 4 participants"), sentiment, cited quotes, tensions, recommendations, and questions for the next round. Each quote from a real session has a **Hear it** button that plays the moment the participant said it.
 
 **Participant**
+
+Participants never sign in and never create an account. They open a share link and talk.
+
 1. `/i/[study]` — a short intro, optional name, mic permission.
 2. A voice conversation with Verbatim. Live captions, a transcript, and (in demo mode) the interviewer's notes appearing in the sidebar as they talk.
 3. A thank-you page with the write-up of what they said, and a link to the researcher's view.
@@ -62,7 +66,33 @@ browser (participant)                      Next.js (Vercel)                     
 - `src/lib/voice/` — the browser Voice Agent client (`client.ts`), audio capture/playback (`audio.ts`), and the worklet (`public/pcm-processor.js`).
 - `src/lib/prompts.ts` — interviewer prompt, tool definitions, write-up and synthesis prompts.
 - `src/lib/analyst.ts` — LLM Gateway calls with schema validation; `src/lib/llm.ts` — the gateway client.
-- `src/db/schema.ts` — studies, interviews, turns, insights, syntheses (Drizzle + libSQL).
+- `src/lib/auth/` — password hashing, sessions, participant grants and the ownership guards.
+- `src/db/schema.ts` — researchers, sessions, studies, interviews, turns, insights, syntheses (Drizzle + libSQL).
+
+## Accounts and access
+
+Two kinds of visitor, and only one of them has an account.
+
+**Researchers sign in.** Every study carries a `researcher_id`, and every interview, transcript, note and recording reaches the dashboard through it. Ownership is the *predicate of the query*, not a check afterwards — the guards in `src/lib/auth/guards.ts` will not load a row that belongs to someone else, so there is no window in which the wrong data is in hand. A study you do not own answers **404**, identically to one that does not exist, so ids cannot be probed.
+
+**One study is published.** The seeded demo carries `is_public`, which makes its dashboard, interview pages, transcripts and recordings readable by anyone with the link and no account — so a visitor can see both halves of the product before signing up. It is the only study with the flag: every study created through the app is private, and there is no UI to change that. Publishing widens *reading* only. Synthesis still belongs to the owner, so a visitor cannot spend the study's API budget, and a stranger cannot publish their way into anyone else's data.
+
+**Participants never sign in.** A share link is all they need, and `/i/[study]` reads nothing but the discussion guide. When an interview starts, the server sets a signed, HTTP-only *grant* cookie naming that one interview id. It carries no identity — it only proves this browser started this conversation — and the write endpoints require it. Without it, anyone who guessed an interview id could inject transcript turns or fabricate "verbatim" quotes into a stranger's study.
+
+| Concern | How |
+|---|---|
+| Passwords | scrypt (N=2¹⁵, r=8), 16-byte random salt per password, ~100 ms per verification. `node:crypto` only, no native dependency. Verified with `timingSafeEqual`. |
+| Sessions | A 256-bit random token in the cookie; the database stores only its SHA-256, so a database leak cannot be replayed as a login. 30-day absolute lifetime, 14-day idle expiry, enforced in the query. |
+| Cookies | `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` in production. |
+| Sign-out | Deletes the session row first, then clears the cookie — the captured token is dead server-side, not merely dropped by the client. Other browsers stay signed in. |
+| CSRF | `SameSite=Lax` plus an `Origin` check on every state-changing route. |
+| Account enumeration | An unknown username and a wrong password return the same status and the same message, and cost the same time (`fakeVerify`). |
+| Brute force | Windowed failed-attempt counters: 10 per username per 15 minutes, 60 per IP. The per-IP limit is loose on purpose so one person's typos cannot lock out an office behind the same NAT. |
+| Recordings | `/api/interviews/[id]/audio` and `/timeline` follow the study: owner-only unless it is published. The pre-signed AssemblyAI URL is minted only after that check. A participant grant does **not** unlock them. |
+| Redirects | `?next=` accepts a same-origin path and nothing else (`src/lib/auth/next-path.ts`). |
+| Publishing | `is_public` is off by default, settable only by the seed, and grants reading but never writing. |
+
+`AUTH_SECRET` signs participant grants and is **required in production** — the app refuses rather than falling back to a public constant.
 
 ## Run it locally
 
@@ -70,9 +100,11 @@ browser (participant)                      Next.js (Vercel)                     
 pnpm install
 cp .env.example .env            # add ASSEMBLYAI_API_KEY
 pnpm db:push                    # creates ./local.db
-pnpm db:seed                    # demo study + 4 sample interviews, real write-ups & synthesis
+pnpm db:seed                    # demo researcher + demo study + 4 sample interviews
 pnpm dev                        # http://localhost:3000
 ```
+
+The seed creates the demo study, published so `/s/demo` opens for anyone, and the account that owns it — username `demo`, password `verbatim-demo-2026` (override with `DEMO_RESEARCHER_PASSWORD`). Sign in as `demo` to re-synthesise it; create your own account at `/signup` for private studies. Participants need neither.
 
 Environment:
 
@@ -80,6 +112,8 @@ Environment:
 |---|---|
 | `ASSEMBLYAI_API_KEY` | AssemblyAI key (server only). |
 | `DATABASE_URL`, `DATABASE_AUTH_TOKEN` | libSQL. `file:./local.db` locally; a Turso URL + token in production. |
+| `AUTH_SECRET` | Signs participant interview grants. **Required in production** (≥16 chars): `openssl rand -base64 32`. Locally it falls back to a development key. |
+| `DEMO_RESEARCHER_PASSWORD` | Password for the seeded `demo` account. Only read by `pnpm db:seed`. |
 | `LLM_MODEL` | LLM Gateway model id. Defaults to `qwen3.5-4b-32k-fast`, which every account can use. On a paid AssemblyAI account set e.g. `claude-sonnet-4-6` for better write-ups. |
 | `NEXT_PUBLIC_APP_URL` | Public URL, used for share links and metadata. |
 
@@ -88,9 +122,43 @@ Environment:
 ## Deploy
 
 1. Create a [Turso](https://turso.tech) database (free tier is plenty). Put its `libsql://…` URL in `DATABASE_URL` and the token in `DATABASE_AUTH_TOKEN`.
-2. With those two variables in your shell or `.env`, run `pnpm db:push && pnpm db:seed` to create the schema and the demo study on it (the seed makes ~5 Gateway calls; on a free AssemblyAI account that takes about 90 s because of rate limits).
-3. Import the repo into [Vercel](https://vercel.com/new) and set `ASSEMBLYAI_API_KEY`, `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `NEXT_PUBLIC_APP_URL` (your Vercel URL) and optionally `LLM_MODEL` / `NEXT_PUBLIC_REPO_URL`. Route handlers that call the Gateway declare `maxDuration` so they fit the Hobby plan.
-4. Open `/i/demo`, do one real interview yourself, then `pnpm synthesize` (or press *Re-synthesise* on the dashboard) so the synthesis includes a recording-backed interview with a working **Hear it** button.
+2. Generate a signing key: `openssl rand -base64 32` → `AUTH_SECRET`.
+3. With those variables in your shell or `.env`, run `pnpm db:push && pnpm db:seed` on a **new** database to create the schema, the demo researcher and the published demo study (the seed makes ~5 Gateway calls; on a free AssemblyAI account that takes about 90 s because of rate limits). For a database that already holds studies, use `pnpm db:migrate-auth --apply` instead — see below.
+4. Import the repo into [Vercel](https://vercel.com/new) and set `ASSEMBLYAI_API_KEY`, `AUTH_SECRET`, `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `NEXT_PUBLIC_APP_URL` (your Vercel URL) and optionally `LLM_MODEL` / `NEXT_PUBLIC_REPO_URL`. Route handlers that call the Gateway declare `maxDuration` so they fit the Hobby plan.
+5. Open `/i/demo`, do one real interview yourself, then sign in as `demo` and press *Re-synthesise* (or run `pnpm synthesize`) so the synthesis includes a recording-backed interview with a working **Hear it** button.
+
+> Anyone who takes the demo interview has their transcript, notes and recording published at `/s/demo`. The intro page says so. Keep `is_public` off for studies with real participants — it is off by default and only the seed sets it.
+
+**Clearing studies.** `pnpm db:reset-studies` deletes studies and everything attached to them — interviews, transcripts, notes and syntheses. It is irreversible and needs `--yes`:
+
+```bash
+pnpm db:reset-studies                     # list what is there, delete nothing
+pnpm db:reset-studies --orphans --yes     # only studies with no owner
+pnpm db:reset-studies --all --yes         # everything
+pnpm db:reset-studies --id abc123 --yes   # one study
+pnpm db:seed                              # recreate the published demo
+```
+
+### Upgrading a database that predates authentication
+
+> **Do not use `drizzle-kit push` for this.** `is_public` is NOT NULL, which makes SQLite rebuild the `studies` table, and `push --force` rebuilds it by dropping what is there. On a database with real data it empties `studies`, cascades into `interviews`, and *then* reports an error. Verified, not theoretical.
+
+`pnpm db:migrate-auth` does the same migration with `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ADD COLUMN` only. Every statement is additive and idempotent, and it prints the row counts before and after so you can see nothing moved.
+
+```bash
+pnpm db:migrate-auth            # show what is missing, change nothing
+pnpm db:migrate-auth --apply    # apply it
+```
+
+Existing studies come out ownerless. That is fail-closed rather than public — every read requires the owner to equal the signed-in researcher, and NULL matches nobody — so they are invisible until claimed. Create an account at `/signup`, then:
+
+```bash
+pnpm db:adopt                       # list the ownerless studies
+pnpm db:adopt <username>            # hand them all to that account
+pnpm db:adopt <username> <studyId>  # or one at a time
+```
+
+`pnpm db:push` remains the right command for an empty database.
 
 Other scripts: `pnpm shots` (screenshots), `pnpm deck` (rebuild `pitch/deck.pdf`), `pnpm db:studio` (browse the database).
 
@@ -98,13 +166,18 @@ Other scripts: `pnpm shots` (screenshots), `pnpm deck` (rebuild `pitch/deck.pdf`
 
 The golden path is covered end-to-end with a fake microphone: Chrome plays a WAV of a scripted participant into the real interview page, the real Voice Agent session runs, and the script checks the transcript, live notes, thank-you page, dashboard and detail page.
 
+Authentication and authorization have their own suite, which needs no microphone: it creates two throwaway researchers and then tries every way one could reach the other's studies, interviews, transcripts, timelines and recordings — plus the participant paths and the published demo, which must keep working with no account at all.
+
 ```bash
 pnpm dev &
+pnpm e2e:auth                                             # auth + authorization (83 checks)
 pnpm e2e                                                  # golden path (add --headed 1 to watch)
 pnpm e2e --end-after 45                                   # participant presses End
 pnpm e2e --wav e2e/participant-timeup.wav --done-timeout 330   # the 3-minute clock wraps it up
 pnpm typecheck && pnpm lint && pnpm build
 ```
+
+`pnpm e2e` runs entirely signed out, which is the real golden path: the participant never has an account and the demo dashboard is published. `pnpm e2e:auth` is what proves every other study stays private.
 
 The WAV fixtures are generated from the Voice Agent's own TTS (see `e2e/`); they're git-ignored, so regenerate or record your own 48 kHz mono WAV.
 
@@ -117,7 +190,7 @@ The WAV fixtures are generated from the Voice Agent's own TTS (see `e2e/`); they
 ## Roadmap
 
 - Phone participation via Twilio SIP (stored agents + `session.completed` webhooks), so recruits can dial in.
-- Multi-study workspace with auth; export to Notion/Docs; participant screening questions.
+- Team workspaces — several researchers sharing one study, on top of the per-account ownership that exists now; export to Notion/Docs; participant screening questions.
 - Analyst "whispers" — a second model suggesting probes to the interviewer mid-conversation, once `conversation.message` steering is available.
 
 ## License

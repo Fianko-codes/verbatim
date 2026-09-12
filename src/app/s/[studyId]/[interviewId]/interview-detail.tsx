@@ -3,12 +3,21 @@
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
 import type { Insight, Interview, Study, Turn } from "@/db/schema";
+import type { Viewer } from "@/lib/auth/session";
 import { PlayQuoteButton, useQuotePlayer } from "@/components/quote-player";
+import { ResearcherNav } from "@/components/researcher-nav";
 import { Eyebrow, SentimentChip, Wordmark, formatDuration, timeAgo } from "@/components/ui";
 
 type Data = { interview: Interview; study: Study; turns: Turn[]; insights: Insight[] };
 
-export function InterviewDetail({ data }: { data: Data }) {
+export function InterviewDetail({
+  data,
+  viewer,
+}: {
+  data: Data;
+  /** Null when a signed-out visitor is reading a published study. */
+  viewer: Viewer | null;
+}) {
   const { interview, study, turns, insights } = data;
   const player = useQuotePlayer();
   const s = interview.summary;
@@ -25,16 +34,23 @@ export function InterviewDetail({ data }: { data: Data }) {
     <main className="flex-1">
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
         <Wordmark />
-        <Link href={`/s/${study.id}`} className="inline-flex items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to {study.title}
-        </Link>
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <Link href={`/s/${study.id}`} className="inline-flex items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink min-w-0">
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">Back to {study.title}</span>
+              <span className="sm:hidden">Back</span>
+            </span>
+          </Link>
+          {viewer && <ResearcherNav viewer={viewer} />}
+        </div>
       </header>
 
       <section className="max-w-6xl mx-auto px-6 pb-16 grid lg:grid-cols-[1fr_380px] gap-8 items-start">
-        <div>
+        <div className="min-w-0">
           <Eyebrow>Interview</Eyebrow>
           <div className="mt-2 flex items-center gap-3 flex-wrap">
-            <h1 className="font-display text-[40px] leading-[1.05] tracking-tight">{interview.participantLabel || "Participant"}</h1>
+            <h1 className="font-display text-[34px] sm:text-[40px] leading-[1.05] tracking-tight break-words">{interview.participantLabel || "Participant"}</h1>
             {interview.isSample && <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[11px] uppercase tracking-wider text-muted">sample</span>}
             {s && <SentimentChip value={s.sentiment} />}
           </div>
@@ -77,11 +93,11 @@ export function InterviewDetail({ data }: { data: Data }) {
                 <div className="mt-5 space-y-2.5">
                   {s.keyQuotes.map((q, i) => (
                     <div key={i} className="flex items-start gap-3 rounded-xl bg-paper-2/70 px-3.5 py-2.5">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="font-display text-[18px] leading-snug">“{q.text}”</div>
                         {q.theme && <div className="mt-0.5 text-[11.5px] uppercase tracking-wider text-muted">{q.theme}</div>}
                       </div>
-                      {canPlay && <PlayQuoteButton interviewId={interview.id} quote={q.text} player={player} />}
+                      {canPlay && <PlayQuoteButton interviewId={interview.id} quote={q.text} player={player} className="shrink-0" />}
                     </div>
                   ))}
                 </div>
@@ -128,7 +144,7 @@ export function InterviewDetail({ data }: { data: Data }) {
           </div>
         </div>
 
-        <aside className="lg:sticky lg:top-6 space-y-4">
+        <aside className="lg:sticky lg:top-6 space-y-4 min-w-0">
           <div className="card p-5">
             <Eyebrow>Discussion guide</Eyebrow>
             <ol className="mt-3 space-y-2.5">
@@ -155,8 +171,8 @@ export function InterviewDetail({ data }: { data: Data }) {
               {insights.map((i) => (
                 <div key={i.id} className="rounded-xl border border-line px-3.5 py-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-[13.5px] font-semibold leading-snug">{i.theme}</div>
-                    <SentimentChip value={i.sentiment} />
+                    <div className="text-[13.5px] font-semibold leading-snug min-w-0">{i.theme}</div>
+                    <SentimentChip value={i.sentiment} className="shrink-0" />
                   </div>
                   <div className="mt-1.5 font-display text-[16px] leading-snug">“{i.quote}”</div>
                   {i.note && <div className="mt-1 text-[12.5px] text-muted leading-snug">{i.note}</div>}

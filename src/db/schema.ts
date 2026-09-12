@@ -1,9 +1,62 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+
+/**
+ * A researcher account. Participants never get one — they join studies through
+ * an unauthenticated share link, so this table is only ever the dashboard side.
+ */
+export const researchers = sqliteTable(
+  "researchers",
+  {
+    id: text("id").primaryKey(),
+    /** Login name, stored lower-cased so lookups are case-insensitive. */
+    username: text("username").notNull(),
+    /** Display name shown in the dashboard header. */
+    name: text("name").notNull().default(""),
+    /** `scrypt$N$r$p$salt$hash` — see src/lib/auth/password.ts. Never leaves the server. */
+    passwordHash: text("password_hash").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("researchers_username_idx").on(t.username)],
+);
+
+/**
+ * A logged-in browser session. The cookie carries a random token; this table
+ * stores only its SHA-256, so a database leak cannot be replayed as a login.
+ */
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    /** SHA-256 of the session token held in the cookie. */
+    id: text("id").primaryKey(),
+    researcherId: text("researcher_id").notNull().references(() => researchers.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    /** Bumped on use so idle sessions can be expired and active ones rolled forward. */
+    lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    userAgent: text("user_agent"),
+  },
+  (t) => [index("sessions_researcher_idx").on(t.researcherId), index("sessions_expiry_idx").on(t.expiresAt)],
+);
+
+/** Windowed failed-sign-in counter, keyed by username and by client IP. */
+export const loginAttempts = sqliteTable("login_attempts", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStartedAt: integer("window_started_at", { mode: "timestamp_ms" }).notNull(),
+});
 
 /** A research study: one discussion guide, many interviews. */
 export const studies = sqliteTable("studies", {
   id: text("id").primaryKey(),
+  /**
+   * The owning researcher. Nullable only so the column can be added to an
+   * existing database without rewriting it; every code path that creates a
+   * study sets it, and every read requires it to equal the viewer's id — so a
+   * legacy row with NULL here is unreachable rather than public.
+   * `pnpm db:adopt` assigns any such rows to an account.
+   */
+  researcherId: text("researcher_id").references(() => researchers.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   /** What the researcher wants to learn. Drives the interviewer + analyst prompts. */
   goal: text("goal").notNull(),
@@ -21,9 +74,20 @@ export const studies = sqliteTable("studies", {
   languageCodes: text("language_codes", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
   /** Show the analyst's live notes to the participant (demo mode). */
   showLiveNotes: integer("show_live_notes", { mode: "boolean" }).notNull().default(true),
+  /**
+   * Publish this study's dashboard to anyone with the link, no account needed.
+   *
+   * Off for every study the app creates — a researcher's work is private by
+   * default and there is no UI to flip this. Only the seeded demo sets it, so
+   * that a visitor can see both sides of the product without signing up. It
+   * makes the transcripts, notes, write-ups and session recordings of everyone
+   * who takes that study readable by the public, so it is not a setting to
+   * enable on a study with real participants.
+   */
+  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
   isDemo: integer("is_demo", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-});
+}, (t) => [index("studies_researcher_idx").on(t.researcherId)]);
 
 export type Topic = {
   id: string;
@@ -136,6 +200,8 @@ export type Synthesis = {
   nextQuestions: string[];
 };
 
+export type Researcher = typeof researchers.$inferSelect;
+export type SessionRow = typeof sessions.$inferSelect;
 export type Study = typeof studies.$inferSelect;
 export type Interview = typeof interviews.$inferSelect;
 export type Turn = typeof turns.$inferSelect;

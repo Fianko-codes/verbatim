@@ -2,15 +2,29 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowRight, Check, Copy, ExternalLink, Mic, Radio, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Copy, Eye, ExternalLink, Mic, Radio, RefreshCw, Sparkles } from "lucide-react";
 import type { Insight, Interview, Sentiment, Study, Synthesis, SynthesisRow } from "@/db/schema";
+import type { Viewer } from "@/lib/auth/session";
 import { PlayQuoteButton, useQuotePlayer } from "@/components/quote-player";
+import { ResearcherNav } from "@/components/researcher-nav";
 import { Button, Eyebrow, SentimentChip, Wordmark, buttonClass, formatDuration, timeAgo } from "@/components/ui";
 
 type InterviewWithInsights = Interview & { insights: Insight[] };
 type Bundle = { study: Study; interviews: InterviewWithInsights[]; synthesis: SynthesisRow | null };
 
-export function Dashboard({ initial, highlight }: { initial: Bundle; highlight: string | null }) {
+export function Dashboard({
+  initial,
+  highlight,
+  viewer,
+  isOwner,
+}: {
+  initial: Bundle;
+  highlight: string | null;
+  /** Null when a signed-out visitor is reading a published study. */
+  viewer: Viewer | null;
+  /** False for anyone reading a published study they do not own: read-only. */
+  isOwner: boolean;
+}) {
   const [bundle, setBundle] = useState<Bundle>(initial);
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthError, setSynthError] = useState<string | null>(null);
@@ -87,30 +101,59 @@ export function Dashboard({ initial, highlight }: { initial: Bundle; highlight: 
     <main className="flex-1">
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
         <Wordmark />
-        <div className="flex items-center gap-2">
-          <Link href="/new" className={`${buttonClass({ variant: "ghost", size: "sm" })} hidden sm:inline-flex`}>
-            New study
-          </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {viewer && (
+            <>
+              <Link href="/studies" className={`${buttonClass({ variant: "ghost", size: "sm" })} max-sm:hidden`}>
+                Studies
+              </Link>
+              <Link href="/new" className={`${buttonClass({ variant: "ghost", size: "sm" })} max-sm:hidden`}>
+                New study
+              </Link>
+            </>
+          )}
           <Link href={`/i/${study.id}`} className={buttonClass({ size: "sm" })}>
-            <Mic className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Open interview link</span><span className="sm:hidden">Interview link</span>
+            <Mic className="w-3.5 h-3.5 max-sm:hidden" />{" "}
+            <span className="hidden sm:inline">{isOwner ? "Open interview link" : "Take this interview"}</span>
+            <span className="sm:hidden">Interview</span>
           </Link>
+          {viewer ? (
+            <ResearcherNav viewer={viewer} className="sm:ml-1" />
+          ) : (
+            <Link href="/signup" className={`${buttonClass({ variant: "secondary", size: "sm" })} sm:ml-1`}>
+              <span className="hidden sm:inline">Create an account</span>
+              <span className="sm:hidden">Sign up</span>
+            </Link>
+          )}
         </div>
       </header>
 
       <section className="max-w-6xl mx-auto px-6 pb-16">
+        {!isOwner && (
+          <div className="mb-6 rounded-2xl border border-line bg-paper-2 px-4 py-3 text-[13px] text-ink-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Eye className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              You&apos;re viewing the public demo study, read-only. Your own studies are private to your account.
+            </span>
+            <Link href="/signup" className="text-ink underline underline-offset-2">
+              Create one
+            </Link>
+          </div>
+        )}
+
         {/* Title block */}
         <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
-          <div>
+          <div className="min-w-0">
             <Eyebrow>Study</Eyebrow>
-            <h1 className="mt-2 font-display text-[44px] sm:text-[52px] leading-[1.02] tracking-tight">{study.title}</h1>
+            <h1 className="mt-2 font-display text-[36px] sm:text-[52px] leading-[1.02] tracking-tight break-words">{study.title}</h1>
             <p className="mt-3 text-[15px] leading-relaxed text-ink-2 max-w-2xl">{study.goal}</p>
             {study.audience && <p className="mt-1 text-[13px] text-muted">Participants: {study.audience}</p>}
           </div>
-          <div className="card p-4">
+          <div className="card p-4 min-w-0">
             <div className="text-[12px] font-medium text-muted">Participant link</div>
             <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded-lg bg-paper-2 px-2.5 py-1.5 text-[12.5px] font-mono">{shareUrl}</code>
-              <Button variant="secondary" size="sm" onClick={copy}>
+              <code className="flex-1 min-w-0 truncate rounded-lg bg-paper-2 px-2.5 py-1.5 text-[12.5px] font-mono">{shareUrl}</code>
+              <Button variant="secondary" size="sm" onClick={copy} className="shrink-0">
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? "Copied" : "Copy"}
               </Button>
@@ -152,8 +195,8 @@ export function Dashboard({ initial, highlight }: { initial: Bundle; highlight: 
             <div className="mt-3 grid md:grid-cols-2 gap-4">
               {live.map((i) => (
                 <div key={i.id} className="card p-5 border-accent/40">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{i.participantLabel || "Participant"}</div>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="font-medium min-w-0 truncate">{i.participantLabel || "Participant"}</div>
                     <span className="text-[12px] text-muted">started {timeAgo(i.startedAt)}</span>
                   </div>
                   <div className="mt-3 space-y-2">
@@ -185,15 +228,19 @@ export function Dashboard({ initial, highlight }: { initial: Bundle; highlight: 
                   {newSince > 0 && <span className="text-accent"> · {newSince} new since</span>}
                 </span>
               )}
-              <Button
-                variant={synthesis && newSince === 0 ? "secondary" : "primary"}
-                size="sm"
-                onClick={synthesize}
-                disabled={synthesizing || completed.filter((i) => i.summary).length === 0}
-              >
-                {synthesizing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                {synthesizing ? "Synthesising…" : synthesis ? "Re-synthesise" : `Synthesise ${completed.length} interviews`}
-              </Button>
+              {/* Synthesis spends the study's API budget, so it stays with the
+                  owner even when the results themselves are published. */}
+              {isOwner && (
+                <Button
+                  variant={synthesis && newSince === 0 ? "secondary" : "primary"}
+                  size="sm"
+                  onClick={synthesize}
+                  disabled={synthesizing || completed.filter((i) => i.summary).length === 0}
+                >
+                  {synthesizing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {synthesizing ? "Synthesising…" : synthesis ? "Re-synthesise" : `Synthesise ${completed.length} interviews`}
+                </Button>
+              )}
             </div>
           </div>
           {synthError && <div className="mt-3 rounded-xl bg-neg-soft text-neg px-3.5 py-2.5 text-[13px]">{synthError}</div>}
@@ -273,20 +320,20 @@ function SynthesisView({
 }) {
   return (
     <div className="mt-5 grid lg:grid-cols-[1fr_320px] gap-5 items-start">
-      <div className="space-y-5">
+      <div className="space-y-5 min-w-0">
         <div className="card p-6">
-          <h3 className="font-display text-[30px] leading-[1.15]">{content.headline}</h3>
+          <h3 className="font-display text-[26px] sm:text-[30px] leading-[1.15]">{content.headline}</h3>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-2">{content.overview}</p>
         </div>
         <div className="space-y-3">
           {content.themes.map((t, idx) => (
             <div key={idx} className="card p-5 animate-fade-up" style={{ animationDelay: `${idx * 60}ms` }}>
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <span className="font-mono text-[12px] text-muted">{String(idx + 1).padStart(2, "0")}</span>
                   <h4 className="text-[17px] font-semibold leading-snug">{t.name}</h4>
                 </div>
-                <SentimentChip value={t.sentiment} />
+                <SentimentChip value={t.sentiment} className="shrink-0" />
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex-1 h-1.5 rounded-full bg-paper-3 overflow-hidden">
@@ -304,14 +351,14 @@ function SynthesisView({
                     const canPlay = Boolean(iv?.aaiSessionId) && !iv?.isSample && iv?.status === "completed";
                     return (
                       <div key={qi} className="flex items-start gap-3 rounded-xl bg-paper-2/70 px-3.5 py-2.5">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="font-display text-[17px] leading-snug">“{q.text}”</div>
                           <div className="mt-1 text-[12px] text-muted">
                             {iv?.participantLabel || "Participant"}
                             {iv?.isSample ? " · sample" : ""}
                           </div>
                         </div>
-                        {canPlay && <PlayQuoteButton interviewId={q.interviewId} quote={q.text} player={player} />}
+                        {canPlay && <PlayQuoteButton interviewId={q.interviewId} quote={q.text} player={player} className="shrink-0" />}
                       </div>
                     );
                   })}
@@ -321,7 +368,7 @@ function SynthesisView({
           ))}
         </div>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <ListCard title="Recommendations" items={content.recommendations} accent />
         <ListCard title="Tensions" items={content.tensions} />
         <ListCard title="Ask next round" items={content.nextQuestions} />
@@ -357,7 +404,7 @@ function InterviewCard({ interview, studyId, highlighted }: { interview: Intervi
       href={`/s/${studyId}/${interview.id}`}
       className={`card block p-5 transition hover:-translate-y-0.5 hover:shadow-lg ${highlighted ? "ring-2 ring-accent/50" : ""}`}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium truncate">{interview.participantLabel || "Participant"}</span>
           {interview.isSample && <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] uppercase tracking-wider text-muted">sample</span>}
@@ -374,7 +421,7 @@ function InterviewCard({ interview, studyId, highlighted }: { interview: Intervi
       ) : s ? (
         <>
           <div className="mt-3 flex items-start justify-between gap-3">
-            <div className="font-display text-[20px] leading-snug">{s.headline}</div>
+            <div className="font-display text-[20px] leading-snug min-w-0">{s.headline}</div>
             <SentimentChip value={s.sentiment} className="mt-1 shrink-0" />
           </div>
           {themes.length > 0 && (

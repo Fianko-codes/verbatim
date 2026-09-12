@@ -6,7 +6,11 @@
  * Launches the system Chrome with a WAV file as the microphone, opens the demo
  * interview, and waits for the conversation to end on its own (the scripted
  * participant says "let's wrap up"). Prints the transcript, insights and the
- * write-up, then checks the interview shows up on the dashboard.
+ * write-up, then checks the interview shows up on the researcher's dashboard.
+ *
+ * The whole run is unauthenticated on purpose: participants never have an
+ * account, and the demo study is the one published study, so its dashboard is
+ * readable by anyone. e2e/auth.mjs covers the authorization rules.
  */
 import { chromium } from "playwright";
 
@@ -96,10 +100,18 @@ try {
     log("FAIL: no user speech was captured");
   }
 
-  // Follow through to the dashboard and confirm the interview is listed.
+  // Follow through to the dashboard. The whole run happens with no account:
+  // the participant never has one, and the demo study is published so its
+  // results are readable by anyone. Authorization itself is covered by
+  // e2e/auth.mjs, which proves every other study stays private.
   const dash = page.locator('a:has-text("See what the researcher sees")');
   const href = await dash.getAttribute("href");
   await page.goto(`${BASE}${href}`, { waitUntil: "networkidle" });
+
+  const readOnly = await page.locator("text=read-only").count();
+  log(readOnly > 0 ? "PASS: public dashboard shows the read-only notice" : "FAIL: no read-only notice");
+  if (readOnly === 0) ok = false;
+
   const listed = await page.locator("text=E2E Bot").count();
   log(listed > 0 ? "PASS: interview listed on dashboard" : "FAIL: interview not on dashboard");
   if (listed === 0) ok = false;
