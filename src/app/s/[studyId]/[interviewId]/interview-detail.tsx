@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import type { Insight, Interview, Study, Turn } from "@/db/schema";
 import type { Viewer } from "@/lib/auth/session";
@@ -107,11 +108,7 @@ export function InterviewDetail({
 
           <div className="mt-8">
             <Eyebrow>Transcript</Eyebrow>
-            {canPlay && (
-              <audio className="mt-3 w-full" controls preload="none" src={`/api/interviews/${interview.id}/audio`}>
-                Your browser does not support audio playback.
-              </audio>
-            )}
+            {canPlay && <SessionRecording interviewId={interview.id} />}
             <div className="card mt-3 divide-y divide-line">
               {turns.length === 0 && <div className="p-5 text-[14px] text-muted">No transcript was recorded.</div>}
               {turns.map((t) => {
@@ -184,6 +181,33 @@ export function InterviewDetail({
         </aside>
       </section>
     </main>
+  );
+}
+
+/**
+ * The full session recording. A pre-signed recording can be gone (expired, or
+ * recorded under a different AssemblyAI key), and a bare <audio> shows a dead
+ * control strip when that happens — so say what went wrong instead.
+ */
+function SessionRecording({ interviewId }: { interviewId: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return (
+      <div className="mt-3 rounded-xl border border-line bg-paper-2/60 px-3.5 py-2.5 text-[13px] text-muted">
+        This session&apos;s recording is no longer available.
+      </div>
+    );
+  }
+  return (
+    <audio
+      className="mt-3 w-full"
+      controls
+      preload="none"
+      src={`/api/interviews/${interviewId}/audio`}
+      onError={() => setBroken(true)}
+    >
+      Your browser does not support audio playback.
+    </audio>
   );
 }
 

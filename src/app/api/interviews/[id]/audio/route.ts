@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getVoiceAgentAudioUrl } from "@/lib/aai";
+import { VoiceAgentSessionNotFound, getVoiceAgentAudioUrl } from "@/lib/aai";
 import { currentViewer, getReadableInterview } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +24,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     if (!url) return NextResponse.json({ error: "Recording not ready yet" }, { status: 404 });
     return NextResponse.redirect(url, { status: 302 });
   } catch (err) {
+    if (err instanceof VoiceAgentSessionNotFound) {
+      console.warn("[audio]", err.message);
+      return NextResponse.json({ error: "Recording not available" }, { status: 404 });
+    }
     console.error("[audio]", err);
     return NextResponse.json({ error: "Recording unavailable" }, { status: 502 });
   }

@@ -39,11 +39,25 @@ export type AaiSession = {
   artifacts: AaiSessionArtifact[];
 };
 
+/** Thrown when the session id is unknown to the API key's account. */
+export class VoiceAgentSessionNotFound extends Error {
+  constructor(sessionId: string) {
+    super(
+      `Voice Agent session ${sessionId} not found. Sessions belong to the AssemblyAI account that created them — ` +
+        `this usually means ASSEMBLYAI_API_KEY differs from the key the interview was recorded with.`,
+    );
+    this.name = "VoiceAgentSessionNotFound";
+  }
+}
+
 export async function getVoiceAgentSession(sessionId: string): Promise<AaiSession> {
   const res = await fetch(`${AGENTS_BASE}/v1/sessions/${encodeURIComponent(sessionId)}`, {
     headers: bearer(),
     cache: "no-store",
   });
+  // A 404 is an expected outcome (recording expired, or a key from another
+  // account), not a transport failure — callers turn it into a clean 404.
+  if (res.status === 404) throw new VoiceAgentSessionNotFound(sessionId);
   if (!res.ok) throw new Error(`Get session failed: HTTP ${res.status} ${await res.text()}`);
   return (await res.json()) as AaiSession;
 }
