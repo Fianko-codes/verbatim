@@ -106,7 +106,7 @@ Live interviews spend AssemblyAI credit by the minute, so Verbatim only runs the
 | Synthesis | Off (button hidden, API returns 503) | On, for the study's owner |
 | Cost | Nothing beyond hosting and the database | Capped by `LIVE_INTERVIEWS_PER_DAY` (default 20 across the deployment, 0 = no cap) |
 
-Seeding without a key fills the demo study from `src/db/demo-archive.ts`: the study synthesis and Daniel's write-up exactly as the real pipeline produced them during the hackathon, and the headline and sentiment of the other three write-ups (the rest of those three was not preserved, and nothing was written in its place). Seeding with a key regenerates everything from the live pipeline. `VERBATIM_LIVE=0` forces showcase mode even with a key set.
+Seeding without a key fills the demo study from `src/db/demo-archive.ts`: the four write-ups and the study synthesis exactly as the real pipeline produced them during the hackathon. Seeding with a key regenerates everything from the live pipeline. `VERBATIM_LIVE=0` forces showcase mode even with a key set.
 
 ## Deploy (Vercel + Turso, free tiers)
 

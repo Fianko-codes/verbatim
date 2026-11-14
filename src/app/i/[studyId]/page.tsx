@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ studyId: string }>; searchParams: Promise<{ sample?: string }> };
 
-/** Daniel's write-up survived in full, so his interview is the default replay. */
+/** The default replay; the intro links to the other three. */
 const DEFAULT_SAMPLE = "Daniel";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
