@@ -3,12 +3,16 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { synthesizeStudy } from "@/lib/analyst";
 import { crossOriginRejected, getOwnedStudy, requireApiViewer, sameOrigin } from "@/lib/auth/guards";
+import { liveEnabled } from "@/lib/mode";
 import { getStudyBundle } from "@/lib/queries";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!sameOrigin(req)) return crossOriginRejected();
+  if (!liveEnabled()) {
+    return NextResponse.json({ error: "Synthesis is switched off on this showcase deployment." }, { status: 503 });
+  }
   const { id } = await ctx.params;
   const auth = await requireApiViewer();
   if (!auth.ok) return auth.response;

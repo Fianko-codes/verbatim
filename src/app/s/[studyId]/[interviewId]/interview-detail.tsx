@@ -63,7 +63,7 @@ export function InterviewDetail({
           {s && (
             <div className="card mt-6 p-6">
               <h2 className="font-display text-[26px] leading-snug">{s.headline}</h2>
-              <p className="mt-3 text-[15px] leading-relaxed text-ink-2">{s.summary}</p>
+              {s.summary && <p className="mt-3 text-[15px] leading-relaxed text-ink-2">{s.summary}</p>}
               <div className="mt-5 grid sm:grid-cols-2 gap-4">
                 {s.painPoints.length > 0 && (
                   <div>

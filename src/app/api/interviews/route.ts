@@ -1,3 +1,4 @@
+import { and, count, eq, gte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -6,6 +7,7 @@ import { db, schema } from "@/db";
 import { mintVoiceAgentToken } from "@/lib/aai";
 import { crossOriginRejected, sameOrigin } from "@/lib/auth/guards";
 import { PARTICIPANT_COOKIE, appendGrant, participantCookieOptions } from "@/lib/auth/participant";
+import { SHOWCASE_MESSAGE, liveEnabled, liveInterviewsPerDay } from "@/lib/mode";
 import { getStudy } from "@/lib/queries";
 import { buildSessionConfig, maxSessionSeconds } from "@/lib/session-config";
 
@@ -26,12 +28,28 @@ const input = z.object({
  */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return crossOriginRejected();
+  if (!liveEnabled()) return NextResponse.json({ error: SHOWCASE_MESSAGE }, { status: 503 });
 
   const parsed = input.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
   const study = await getStudy(parsed.data.studyId);
   if (!study) return NextResponse.json({ error: "Study not found" }, { status: 404 });
+
+  // A public link must not be able to run up an unbounded bill.
+  const cap = liveInterviewsPerDay();
+  if (cap > 0) {
+    const [{ n }] = await db
+      .select({ n: count() })
+      .from(schema.interviews)
+      .where(and(eq(schema.interviews.isSample, false), gte(schema.interviews.startedAt, new Date(Date.now() - 86_400_000))));
+    if (n >= cap) {
+      return NextResponse.json(
+        { error: "This deployment has reached today's limit on live interviews. Please try again tomorrow." },
+        { status: 429 },
+      );
+    }
+  }
 
   let token: string;
   try {

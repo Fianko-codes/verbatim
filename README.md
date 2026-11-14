@@ -6,7 +6,7 @@ Verbatim is an AI-moderated research interviewer. A researcher writes a discussi
 
 Built for the [AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon) on the **Voice Agent API**, **LLM Gateway**, and **session recordings**.
 
-> **Try it:** open the demo, click *Try a 3-minute interview*, talk, then open *See what the researcher sees*.
+> **Try it:** open the demo, click *Try a 3-minute interview* (or *Watch a sample interview* on a showcase deployment), then open *See what the researcher sees*.
 
 ![Verbatim landing page](docs/shots/landing.png)
 
@@ -94,6 +94,39 @@ Two kinds of visitor, and only one of them has an account.
 
 `AUTH_SECRET` signs participant grants and is **required in production** — the app refuses rather than falling back to a public constant.
 
+## Showcase mode and live mode
+
+Live interviews spend AssemblyAI credit by the minute, so Verbatim only runs them when the deployment has a key.
+
+| | Showcase (no `ASSEMBLYAI_API_KEY`) | Live (key set) |
+|---|---|---|
+| Landing button | *Watch a sample interview* | *Try a 3-minute interview* |
+| `/i/demo` | Replays a sample interview in the real interview room: captions, transcript, live notes, topic progress, then its write-up. Text only, no microphone. | A real voice interview |
+| `/i/<other study>` | "Interviews are paused here" | A real voice interview |
+| Synthesis | Off (button hidden, API returns 503) | On, for the study's owner |
+| Cost | Nothing beyond hosting and the database | Capped by `LIVE_INTERVIEWS_PER_DAY` (default 20 across the deployment, 0 = no cap) |
+
+Seeding without a key fills the demo study from `src/db/demo-archive.ts`: the study synthesis and Daniel's write-up exactly as the real pipeline produced them during the hackathon, and the headline and sentiment of the other three write-ups (the rest of those three was not preserved, and nothing was written in its place). Seeding with a key regenerates everything from the live pipeline. `VERBATIM_LIVE=0` forces showcase mode even with a key set.
+
+## Deploy (Vercel + Turso, free tiers)
+
+```bash
+turso db create verbatim
+turso db show verbatim --url          # → DATABASE_URL
+turso db tokens create verbatim       # → DATABASE_AUTH_TOKEN
+
+DATABASE_URL=… DATABASE_AUTH_TOKEN=… pnpm db:push
+DATABASE_URL=… DATABASE_AUTH_TOKEN=… pnpm db:seed     # add ASSEMBLYAI_API_KEY to regenerate write-ups live
+
+vercel link
+vercel env add DATABASE_URL production
+vercel env add DATABASE_AUTH_TOKEN production
+vercel env add AUTH_SECRET production                 # openssl rand -base64 32
+vercel --prod
+```
+
+Add `ASSEMBLYAI_API_KEY` (and optionally `LIVE_INTERVIEWS_PER_DAY`) to switch the deployment to live interviews. `vercel.json` pins functions to `dub1`; put the Turso database in the nearest region (or change the pin) to keep queries fast.
+
 ## Run it locally
 
 ```bash
@@ -116,6 +149,8 @@ Environment:
 | `DEMO_RESEARCHER_PASSWORD` | Password for the seeded `demo` account. Only read by `pnpm db:seed`. |
 | `LLM_MODEL` | LLM Gateway model id. Defaults to `qwen3.5-4b-32k-fast`, which every account can use. On a paid AssemblyAI account set e.g. `claude-sonnet-4-6` for better write-ups. |
 | `NEXT_PUBLIC_APP_URL` | Public URL, used for share links and metadata. |
+| `VERBATIM_LIVE` | Set to `0` to run as a showcase even with a key. |
+| `LIVE_INTERVIEWS_PER_DAY` | Cap on live interviews across the deployment per rolling 24 h. Default 20; 0 disables the cap. |
 
 > **Account tiers.** On a free AssemblyAI account the LLM Gateway is limited to the small Qwen model and ~2 requests / 30 s; Verbatim is designed around that (live notes come from the interviewer's tool calls, and the Gateway is only called at the end of an interview and for synthesis). A paid account unlocks Claude/GPT/Gemini and 30 req/min per model — just change `LLM_MODEL`.
 

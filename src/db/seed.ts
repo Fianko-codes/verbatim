@@ -7,13 +7,14 @@
  * pipeline (AssemblyAI LLM Gateway), so what judges see is what the product does.
  *
  *   pnpm db:seed                 # transcripts + notes, then real write-ups + synthesis
- *   SKIP_ANALYSIS=1 pnpm db:seed # transcripts + notes only (no API calls)
+ *   SKIP_ANALYSIS=1 pnpm db:seed # no API calls: archived write-ups + synthesis (src/db/demo-archive.ts)
  */
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db, schema } from "./index";
 import { summarizeInterview, synthesizeStudy } from "../lib/analyst";
+import { ARCHIVED_SUMMARIES, ARCHIVED_SYNTHESIS } from "./demo-archive";
 import { hashPassword } from "../lib/auth/password";
 import { DEMO_RESEARCHER_USERNAME, DEMO_STUDY_ID } from "../lib/constants";
 import type { Sentiment, Study } from "./schema";
@@ -196,7 +197,7 @@ const scripts: Script[] = [
 
 async function main() {
   const skipAnalysis = process.env.SKIP_ANALYSIS === "1" || !process.env.ASSEMBLYAI_API_KEY;
-  if (skipAnalysis) console.log("Seeding transcripts + notes only (SKIP_ANALYSIS or no ASSEMBLYAI_API_KEY).");
+  if (skipAnalysis) console.log("No live analysis (SKIP_ANALYSIS or no ASSEMBLYAI_API_KEY): using the archived write-ups and synthesis.");
 
   study.researcherId = await ensureDemoResearcher();
 
@@ -209,8 +210,10 @@ async function main() {
   await db.delete(schema.syntheses).where(eq(schema.syntheses.studyId, DEMO_STUDY_ID));
   console.log(`Study "${study.title}" ready.`);
 
+  const idByLabel = new Map<string, string>();
   for (const s of scripts) {
     const interviewId = nanoid(12);
+    idByLabel.set(s.label, interviewId);
     const startedAt = new Date(Date.now() - s.hoursAgo * 3600_000);
     const turnRows = s.turns.map(([role, text], idx) => ({
       id: nanoid(12),
@@ -234,7 +237,7 @@ async function main() {
       createdAt: new Date(startedAt.getTime() + turnRows[n.turnIdx].atMs + 1500),
     }));
 
-    let summary = null;
+    let summary = skipAnalysis ? (ARCHIVED_SUMMARIES[s.label] ?? null) : null;
     if (!skipAnalysis) {
       try {
         summary = await summarizeInterview({ study, turns: turnRows, insights: insightRows });
@@ -260,7 +263,26 @@ async function main() {
     console.log(`  ${s.label}: ${turnRows.length} turns, ${insightRows.length} notes${summary ? `, "${summary.headline}"` : ""}`);
   }
 
-  if (!skipAnalysis) {
+  if (skipAnalysis) {
+    const content = {
+      ...ARCHIVED_SYNTHESIS,
+      themes: ARCHIVED_SYNTHESIS.themes.map(({ quotes, ...theme }) => ({
+        ...theme,
+        quotes: quotes.flatMap((q) => {
+          const interviewId = idByLabel.get(q.participant);
+          return interviewId ? [{ interviewId, text: q.text }] : [];
+        }),
+      })),
+    };
+    await db.insert(schema.syntheses).values({
+      id: nanoid(12),
+      studyId: study.id,
+      interviewCount: scripts.length,
+      content,
+      createdAt: new Date(Date.now() - 3600_000),
+    });
+    console.log(`Synthesis (archived): "${content.headline}" — ${content.themes.length} themes`);
+  } else {
     const rows = await db.select().from(schema.interviews).where(eq(schema.interviews.studyId, study.id));
     const allInsights = await db.select().from(schema.insights).where(eq(schema.insights.studyId, study.id));
     const interviews = rows.map((r) => ({ ...r, insights: allInsights.filter((i) => i.interviewId === r.id) }));

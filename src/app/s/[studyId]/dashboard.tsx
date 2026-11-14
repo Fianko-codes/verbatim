@@ -17,6 +17,7 @@ export function Dashboard({
   highlight,
   viewer,
   isOwner,
+  live: liveMode,
 }: {
   initial: Bundle;
   highlight: string | null;
@@ -24,6 +25,8 @@ export function Dashboard({
   viewer: Viewer | null;
   /** False for anyone reading a published study they do not own: read-only. */
   isOwner: boolean;
+  /** False on a showcase deployment: no live interviews, no synthesis. */
+  live: boolean;
 }) {
   const [bundle, setBundle] = useState<Bundle>(initial);
   const [synthesizing, setSynthesizing] = useState(false);
@@ -114,7 +117,7 @@ export function Dashboard({
           )}
           <Link href={`/i/${study.id}`} className={buttonClass({ size: "sm" })}>
             <Mic className="w-3.5 h-3.5 max-sm:hidden" />{" "}
-            <span className="hidden sm:inline">{isOwner ? "Open interview link" : "Take this interview"}</span>
+            <span className="hidden sm:inline">{!liveMode ? "Watch a sample interview" : isOwner ? "Open interview link" : "Take this interview"}</span>
             <span className="sm:hidden">Interview</span>
           </Link>
           {viewer ? (
@@ -230,7 +233,7 @@ export function Dashboard({
               )}
               {/* Synthesis spends the study's API budget, so it stays with the
                   owner even when the results themselves are published. */}
-              {isOwner && (
+              {isOwner && liveMode && (
                 <Button
                   variant={synthesis && newSince === 0 ? "secondary" : "primary"}
                   size="sm"
@@ -271,7 +274,7 @@ export function Dashboard({
           </div>
           {interviews.some((i) => i.isSample) && (
             <p className="mt-2 text-[12.5px] text-muted">
-              Interviews marked <span className="font-medium">sample</span> use scripted transcripts and notes so the dashboard has something to show — their write-ups and the study synthesis are produced by the real pipeline.
+              Interviews marked <span className="font-medium">sample</span> use scripted transcripts and notes so the dashboard has something to show — their write-ups and the study synthesis are produced by the real pipeline{liveMode ? "" : ", archived from a live run"}.
             </p>
           )}
           <div className="mt-4 grid md:grid-cols-2 gap-4">

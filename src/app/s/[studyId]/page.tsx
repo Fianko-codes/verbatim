@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { currentViewer, getReadableStudy, requireReadableStudy } from "@/lib/auth/guards";
+import { liveEnabled } from "@/lib/mode";
 import { getStudyBundle } from "@/lib/queries";
 import { Dashboard } from "./dashboard";
 
@@ -35,6 +36,7 @@ export default async function StudyPage({ params, searchParams }: Props) {
       highlight={highlight ?? null}
       viewer={viewer}
       isOwner={isOwner}
+      live={liveEnabled()}
     />
   );
 }

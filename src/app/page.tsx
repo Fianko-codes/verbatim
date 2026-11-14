@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { ArrowRight, AudioLines, MessageSquareQuote, Mic, Sparkles } from "lucide-react";
+import { ArrowRight, AudioLines, MessageSquareQuote, Mic, Play, Sparkles } from "lucide-react";
 import { currentViewer } from "@/lib/auth/guards";
 import { DEMO_STUDY_ID, REPO_URL } from "@/lib/constants";
+import { liveEnabled } from "@/lib/mode";
 import { Eyebrow, Wordmark, buttonClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const viewer = await currentViewer();
+  const live = liveEnabled();
   return (
     <main className="flex-1">
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
@@ -51,14 +53,18 @@ export default async function Home() {
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link href={`/i/${DEMO_STUDY_ID}`} className={buttonClass({ size: "lg" })}>
-              <Mic className="w-4 h-4" /> Try a 3-minute interview
+              {live ? <Mic className="w-4 h-4" /> : <Play className="w-4 h-4" />} {live ? "Try a 3-minute interview" : "Watch a sample interview"}
             </Link>
             {/* The demo study is published, so this works with no account. */}
             <Link href={`/s/${DEMO_STUDY_ID}`} className={buttonClass({ variant: "secondary", size: "lg" })}>
               See the researcher&apos;s view <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <p className="mt-4 text-[13px] text-muted">Works in the browser with a microphone. Headphones recommended.</p>
+          <p className="mt-4 text-[13px] text-muted">
+            {live
+              ? "Works in the browser with a microphone. Headphones recommended."
+              : "Live voice interviews are off on this deployment (they cost API credit per minute). The sample replay and the researcher's view show the full product."}
+          </p>
         </div>
 
         <div className="animate-fade-up [animation-delay:120ms] min-w-0">
